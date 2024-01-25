@@ -124,7 +124,7 @@ export function addToolButtons(manager, app) {
     createToolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
-    let filteredTools;
+    let filteredTools = [];
     const { activeMap } = app.maps;
     if (activeMap instanceof CesiumMap) {
       filteredTools = createToolbox.action.tools.filter(

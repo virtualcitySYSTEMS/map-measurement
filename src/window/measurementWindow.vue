@@ -219,7 +219,7 @@
     <div class="d-flex w-full justify-space-between px-2 pt-2 pb-1">
       <VcsFormButton
         @click="addToCategory"
-        icon="$vcsComponents"
+        icon="$vcsComponentsPlus"
         :disabled="isPersistent"
       />
       <VcsFormButton @click="createNewMeasurement" variant="filled">
