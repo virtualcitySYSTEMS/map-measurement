@@ -1,6 +1,6 @@
 {
   "name": "@vcmap/measurement",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "VCM Measurement Plugin",
   "type": "module",
   "main": "src/index.js",
