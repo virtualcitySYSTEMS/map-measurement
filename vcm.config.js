@@ -1,5 +1,5 @@
 export default {
-    appConfig: {
-        modules: ['config/base.config.json'],
-    },
+  appConfig: {
+    modules: ['config/base.config.json'],
+  },
 };

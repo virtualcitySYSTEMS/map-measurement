@@ -1,13 +1,15 @@
-import { WindowSlot } from '@vcmap/ui';
-import { name, version, mapVersion } from '../package.json';
-import getDefaultOptions from './defaultOptions.js';
-import HelloWorld, { windowId } from './helloWorld.vue';
+import { moduleIdSymbol } from '@vcmap/core';
 
-/**
- * @typedef {Object} PluginConfig
- * @property {boolean} [showLogHelloWorld]
- * @property {boolean} [showComponent=true] - Whether to show the HelloWorld Vue component or just log 'Hello World!' to console
- */
+import { name, version, mapVersion } from '../package.json';
+import { addToolButtons, MeasurementType } from './util/toolbox.js';
+import { createMeasurementManager } from './measurementManager.js';
+import { setupMeasurementResultWindow } from './window/setup.js';
+import setupKeyListeners from './util/keyListeners.js';
+import addContextMenu from './util/context.js';
+
+import SimpleMeasurementCategory, {
+  setupSimpleCategories,
+} from './category/simpleCategory.js';
 
 /**
  * @typedef {Object} PluginState
@@ -16,21 +18,11 @@ import HelloWorld, { windowId } from './helloWorld.vue';
  */
 
 /**
- * A function returning 'Hello World!'.
- * @returns {string}
- */
-export function helloWorld() {
-  return 'Hello World!';
-}
-
-/**
  * @param {PluginConfig} config - the configuration of this plugin instance, passed in from the app.
- * @param {string} baseUrl - the absolute URL from which the plugin was loaded (without filename, ending on /)
  * @returns {import("@vcmap/ui/src/vcsUiApp").VcsPlugin<PluginConfig, PluginState>}
  */
-export default function helloWorldPlugin(config, baseUrl) {
+export default function measurementPlugin(config) {
   // eslint-disable-next-line no-console
-  console.log(config, baseUrl);
   return {
     get name() {
       return name;
@@ -42,101 +34,147 @@ export default function helloWorldPlugin(config, baseUrl) {
       return mapVersion;
     },
     get config() {
-      return { ...getDefaultOptions(), ...config };
+      return config;
     },
-    helloWorld,
+    _destroy: () => {},
     /**
      * @param {import("@vcmap/ui").VcsUiApp} vcsUiApp
-     * @param {PluginState=} state
      */
-    initialize(vcsUiApp, state) {
-      // eslint-disable-next-line no-console
-      console.log(
-        'Called before loading the rest of the current context. Passed in the containing Vcs UI App ',
+    async initialize(vcsUiApp) {
+      this._measurementManager = createMeasurementManager(vcsUiApp);
+      const destroyButtons = addToolButtons(this._measurementManager, vcsUiApp);
+      const { destroy: destroyDrawWindow } = setupMeasurementResultWindow(
+        this._measurementManager,
         vcsUiApp,
-        state,
       );
-      this._app = vcsUiApp;
-    },
-    /**
-     * @param {import("@vcmap/ui").VcsUiApp} vcsUiApp
-     * @returns {Promise<void>}
-     */
-    async onVcsAppMounted(vcsUiApp) {
-      if (this.config.showComponent) {
-        vcsUiApp.windowManager.add(
-          {
-            id: windowId,
-            component: HelloWorld,
-            WindowSlot: WindowSlot.DETACHED,
-            position: {
-              left: '40%',
-              right: '40%',
-            },
-            state: {
-              headerTitle: name,
-            },
-          },
-          name,
-        );
-      } else {
-        // eslint-disable-next-line no-console
-        console.log(name, helloWorld());
-      }
-    },
-    /**
-     * @param {boolean} forUrl
-     * @returns {PluginState}
-     */
-    getState(forUrl) {
-      // eslint-disable-next-line no-console
-      console.log('Called when collecting state, e.g. for create link', forUrl);
-      const state = {
-        active: this._app.windowManager.has(windowId),
+
+      const destroyKeyListeners = setupKeyListeners(this._measurementManager);
+      vcsUiApp.categoryClassRegistry.registerClass(
+        this[moduleIdSymbol],
+        SimpleMeasurementCategory.className,
+        SimpleMeasurementCategory,
+      );
+
+      const destroySimpleCategory = await setupSimpleCategories(
+        this._measurementManager,
+        vcsUiApp,
+      );
+
+      addContextMenu(vcsUiApp, this._measurementManager, this.name);
+      this._destroy = () => {
+        destroyButtons();
+        destroyDrawWindow();
+        destroySimpleCategory();
+        destroyKeyListeners();
       };
-      if (!forUrl) {
-        state.position = this._app.windowManager.get(windowId).position;
-      }
-      return state;
-    },
-    getDefaultOptions,
-    /**
-     * @returns {PluginConfig}
-     */
-    toJSON() {
-      // eslint-disable-next-line no-console
-      console.log('Called when serializing this plugin instance');
-      const defaultOptions = getDefaultOptions();
-      const options = {};
-      if (this.config.showLogHelloWorld !== defaultOptions.showLogHelloWorld) {
-        options.showLogHelloWorld = this.config.showLogHelloWorld;
-      }
-      if (this.config.showComponent !== defaultOptions.showComponent) {
-        options.showComponent = this.config.showComponent;
-      }
-      return options;
     },
     i18n: {
       en: {
-        helloWorld: {
-          helloWorld: 'Hello World',
-          close: 'Close',
-          log: 'Log',
-          logTooltip: 'Log Hello World to console',
+        measurement: {
+          header: {
+            title: 'Measurement',
+          },
+          create: {
+            new: 'New',
+            [MeasurementType.Position3D]: 'Point',
+            [MeasurementType.Distance2D]: '2D-Distance',
+            [MeasurementType.Distance3D]: '3D-Distance',
+            [MeasurementType.Area2D]: '2D-Area',
+            [MeasurementType.Area3D]: '3D-Area',
+            [MeasurementType.ObliqueHeight2D]: '2D-Height',
+            [MeasurementType.Height3D]: '3D-Height',
+          },
+          value: {
+            point: 'Point',
+            points: 'Measurement Points',
+            distance: 'Distance',
+            area: 'Area',
+            circumference: 'Circumference',
+            height: 'Height',
+            groundPoint: 'Ground Point',
+            heightPoint: 'Height Point',
+            horizontalDistance: 'Horizontal Distance',
+            beta: 'Beta',
+            alpha: 'Alpha',
+          },
+          edit: 'Edit measurement',
+          select: 'Select measurements',
+          category: {
+            selectAll: 'Select all',
+            hideSelected: 'Hide measurements',
+            hideAll: 'Hide all',
+            showAll: 'Show all',
+            zoomTo: 'Zoom to',
+            rename: 'Rename',
+            edit: 'Edit',
+            remove: 'Remove',
+            removeSelected: 'Remove selected measurements',
+            removeAll: 'Remove all measurements',
+            exportSelected: 'Export selected measurements',
+            exportAll: 'Export all measurements',
+          },
+          hint: {
+            oblique:
+              'Please notice that measurements only provide correct results if measured on the ground',
+          },
         },
       },
       de: {
-        helloWorld: {
-          helloWorld: 'Hallo Welt',
-          close: 'Schließen',
-          log: 'Loggen',
-          logTooltip: 'Logge Hello World in Console',
+        measurement: {
+          header: {
+            title: 'Messen',
+          },
+          create: {
+            new: 'Neu',
+            [MeasurementType.Position3D]: 'Punkt',
+            [MeasurementType.Distance2D]: '2D-Distanz',
+            [MeasurementType.Distance3D]: '3D-Distanz',
+            [MeasurementType.Area2D]: '2D-Fläche',
+            [MeasurementType.Area3D]: '3D-Fläche',
+            [MeasurementType.ObliqueHeight2D]: '2D-Höhe',
+            [MeasurementType.Height3D]: '3D-Höhe',
+          },
+          value: {
+            point: 'Punkt',
+            points: 'Messpunkte',
+            distance: 'Distanz',
+            area: 'Fläche',
+            circumference: 'Umfang',
+            height: 'Höhe',
+            groundPoint: 'Bodenpunkt',
+            heightPoint: 'Höhenpunkt',
+            horizontalDistance: 'Horizontale Distanz',
+            beta: 'Beta',
+            alpha: 'Alpha',
+          },
+          edit: 'Messung editieren',
+          select: 'Messungen',
+          category: {
+            selectAll: 'Alle selektieren',
+            hideSelected: 'Selektierte Messungen ausblenden',
+            hideAll: 'Alle ausblenden',
+            showAll: 'Alle einblenden',
+            zoomTo: 'Hin zoomen',
+            rename: 'Umbenennen',
+            edit: 'Editieren',
+            remove: 'Entfernen',
+            removeSelected: 'Selektierte Messungen löschen',
+            removeAll: 'Alle Messungen löschen',
+            exportSelected: 'Selektierte Messungen exportieren',
+            exportAll: 'Alle Messungen exportieren',
+          },
+          hint: {
+            oblique:
+              'Bitte beachten Sie, dass Messungen nur dann korrekte Ergebnisse liefern, wenn sie auf dem Boden gemessen werden.',
+          },
         },
       },
     },
     destroy() {
-      // eslint-disable-next-line no-console
-      console.log('hook to cleanup');
+      if (this._measurementManager) {
+        this._measurementManager.destroy();
+        this._destroy();
+      }
     },
   };
 }
