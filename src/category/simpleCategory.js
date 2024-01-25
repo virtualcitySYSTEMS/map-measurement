@@ -179,16 +179,16 @@ function itemMappingFunction(
 
   const hideAction = {
     name: 'hideAction',
-    icon: hidden ? 'mdi-eye-off' : 'mdi-eye',
+    icon: hidden ? '$vcsCheckbox' : '$vcsCheckboxChecked',
     callback() {
       if (!hidden) {
         layer.featureVisibility.hideObjects([featureItem.name]);
         hidden = true;
-        this.icon = 'mdi-eye-off';
+        this.icon = '$vcsCheckbox';
       } else {
         layer.featureVisibility.showObjects([featureItem.name]);
         hidden = false;
-        this.icon = 'mdi-eye';
+        this.icon = '$vcsCheckboxChecked';
       }
     },
   };
@@ -201,7 +201,7 @@ function itemMappingFunction(
         event.ids.some((id) => id === categoryListItem.name)
       ) {
         hidden = !!layer.featureVisibility.hiddenObjects[categoryListItem.name];
-        hideAction.icon = hidden ? 'mdi-eye-off' : 'mdi-eye';
+        hideAction.icon = hidden ? '$vcsCheckbox' : '$vcsCheckboxChecked';
       }
     },
   );

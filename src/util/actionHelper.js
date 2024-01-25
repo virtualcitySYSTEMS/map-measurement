@@ -11,7 +11,7 @@ export function createHideSelectedAction(manager, id) {
   return {
     id,
     name: 'measurement.category.hideSelected',
-    icon: 'mdi-eye',
+    icon: '$vcsCheckboxChecked',
     callback() {
       // XXX Copy paste from simple category
       const layer = manager.getDefaultLayer();
