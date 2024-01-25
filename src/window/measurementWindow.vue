@@ -243,14 +243,7 @@
     VcsFormButton,
   } from '@vcmap/ui';
   import { VRow, VCol, VSheet } from 'vuetify/lib';
-  import {
-    inject,
-    ref,
-    watch,
-    onUnmounted,
-    getCurrentInstance,
-    computed,
-  } from 'vue';
+  import { inject, ref, watch, getCurrentInstance, computed } from 'vue';
   import { MeasurementType } from '../util/toolbox.js';
   import { measurementModeSymbol } from '../mode/measurementMode.js';
 
@@ -350,10 +343,6 @@
         },
         { immediate: true },
       );
-
-      onUnmounted(() => {
-        manager.stopEditing();
-      });
 
       return {
         values,

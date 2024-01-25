@@ -8,7 +8,7 @@ import setupKeyListeners from './util/keyListeners.js';
 import addContextMenu from './util/context.js';
 
 import SimpleMeasurementCategory, {
-  setupSimpleCategories,
+  createCategory,
 } from './category/simpleCategory.js';
 
 /**
@@ -42,29 +42,30 @@ export default function measurementPlugin(config) {
      */
     async initialize(vcsUiApp) {
       this._measurementManager = createMeasurementManager(vcsUiApp);
-      const destroyButtons = addToolButtons(this._measurementManager, vcsUiApp);
-      const { destroy: destroyDrawWindow } = setupMeasurementResultWindow(
-        this._measurementManager,
-        vcsUiApp,
-      );
 
-      const destroyKeyListeners = setupKeyListeners(this._measurementManager);
       vcsUiApp.categoryClassRegistry.registerClass(
         this[moduleIdSymbol],
         SimpleMeasurementCategory.className,
         SimpleMeasurementCategory,
       );
 
-      const destroySimpleCategory = await setupSimpleCategories(
+      const { categoryUiItem: collectionComponent, destroy: destroyCategory } =
+        await createCategory(this._measurementManager, vcsUiApp);
+
+      const destroyButtons = addToolButtons(this._measurementManager, vcsUiApp);
+      const { destroy: destroyDrawWindow } = setupMeasurementResultWindow(
         this._measurementManager,
         vcsUiApp,
+        collectionComponent,
       );
+
+      const destroyKeyListeners = setupKeyListeners(this._measurementManager);
 
       addContextMenu(vcsUiApp, this._measurementManager, this.name);
       this._destroy = () => {
         destroyButtons();
         destroyDrawWindow();
-        destroySimpleCategory();
+        destroyCategory();
         destroyKeyListeners();
       };
     },

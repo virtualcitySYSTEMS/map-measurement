@@ -5,12 +5,10 @@ import {
   Viewpoint,
   mercatorProjection,
   Extent,
-  SessionType,
   FeatureVisibilityAction,
 } from '@vcmap/core';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable.js';
-import { watch } from 'vue';
 import { isEmpty } from 'ol/extent.js';
 import { name } from '../../package.json';
 import { createDeleteSelectedAction } from '../util/actionHelper.js';
@@ -259,70 +257,11 @@ function itemMappingFunction(
 }
 
 /**
- * @param {MeasurementManager} manager
- * @param {import("@vcmap/ui").CollectionComponent} categoryUiItem
- * @param {import("@vcmap/core").VectorLayer} layer
- * @returns {(function(): void)}
- */
-function syncSelection(manager, categoryUiItem, layer) {
-  let selectionRevision = 0;
-  let featureRevision = 0;
-
-  const selectionWatcher = watch(categoryUiItem.selection, () => {
-    if (selectionRevision < featureRevision) {
-      selectionRevision = featureRevision;
-      return;
-    }
-    if (selectionRevision === featureRevision) {
-      selectionRevision += 1;
-      const { selection } = categoryUiItem;
-      if (manager.currentLayer.value !== layer) {
-        manager.currentLayer.value = layer;
-      }
-      if (manager.currentSession.value?.type !== SessionType.SELECT) {
-        manager.startSelectSession();
-      }
-      manager.currentSession.value.setCurrentFeatures(
-        layer.getFeaturesById(selection.value.map((i) => i.name)),
-      );
-    }
-  });
-  const featureWatcher = watch(manager.currentFeatures, () => {
-    if (featureRevision < selectionRevision) {
-      featureRevision = selectionRevision;
-      return;
-    }
-    if (featureRevision === selectionRevision) {
-      featureRevision += 1;
-      categoryUiItem.selection.value = categoryUiItem.items.value.filter((i) =>
-        manager.currentFeatures.value.find((f) => f.getId() === i.name),
-      ); // XXX perfomance?
-    }
-    if (manager.currentFeatures.value.length !== 0) {
-      manager.currentLayer.value.getFeatures().forEach((f) => {
-        if (
-          !manager.category.value.collection.hasKey(f.getId()) &&
-          !manager.currentFeatures.value.includes(f)
-        ) {
-          manager.currentLayer.value.removeFeaturesById([f.getId()]);
-        }
-      });
-    }
-  });
-  return () => {
-    selectionWatcher();
-    featureWatcher();
-  };
-}
-
-/**
  * @param {import("../measurementManager.js").MeasurementManager} manager
  * @param {VcsUiApp} vcsApp
  * @returns {function():void}
  */
-async function createCategory(manager, vcsApp) {
-  const layer = manager.getDefaultLayer();
-
+export async function createCategory(manager, vcsApp) {
   const { action: removeAction, destroy: destroyRemoveAction } =
     createDeleteSelectedAction(
       manager,
@@ -358,22 +297,11 @@ async function createCategory(manager, vcsApp) {
     [category.name],
   );
 
-  const selectionWatchers = syncSelection(manager, categoryUiItem, layer);
-  return () => {
-    selectionWatchers();
-    vcsApp.categoryManager.removeOwner(name);
-    destroyRemoveAction();
-  };
-}
-
-/**
- * @param {MeasurementManager} manager
- * @param {import("@vcmap/ui").VcsUiApp} app
- * @returns {Promise<function():void>}
- */
-export async function setupSimpleCategories(manager, app) {
-  const listeners = await createCategory(manager, app);
-  return () => {
-    listeners.forEach((cb) => cb());
+  return {
+    categoryUiItem,
+    destroy() {
+      vcsApp.categoryManager.removeOwner(name);
+      destroyRemoveAction();
+    },
   };
 }
