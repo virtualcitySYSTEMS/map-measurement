@@ -3,7 +3,7 @@ import { moduleIdSymbol } from '@vcmap/core';
 import { name, version, mapVersion } from '../package.json';
 import { addToolButtons, MeasurementType } from './util/toolbox.js';
 import { createMeasurementManager } from './measurementManager.js';
-import { setupMeasurementResultWindow } from './window/setup.js';
+import setupMeasurementResultWindow from './window/setup.js';
 import setupKeyListeners from './util/keyListeners.js';
 import addContextMenu from './util/context.js';
 
@@ -53,18 +53,19 @@ export default function measurementPlugin(config) {
         await createCategory(this._measurementManager, vcsUiApp);
 
       const destroyButtons = addToolButtons(this._measurementManager, vcsUiApp);
-      const { destroy: destroyDrawWindow } = setupMeasurementResultWindow(
-        this._measurementManager,
-        vcsUiApp,
-        collectionComponent,
-      );
+      const { destroy: destroyMeasurementWindow } =
+        setupMeasurementResultWindow(
+          this._measurementManager,
+          vcsUiApp,
+          collectionComponent,
+        );
 
       const destroyKeyListeners = setupKeyListeners(this._measurementManager);
 
       addContextMenu(vcsUiApp, this._measurementManager, this.name);
       this._destroy = () => {
         destroyButtons();
-        destroyDrawWindow();
+        destroyMeasurementWindow();
         destroyCategory();
         destroyKeyListeners();
       };
@@ -84,6 +85,16 @@ export default function measurementPlugin(config) {
             [MeasurementType.Area3D]: '3D-Area',
             [MeasurementType.ObliqueHeight2D]: '2D-Height',
             [MeasurementType.Height3D]: '3D-Height',
+            tooltip: {
+              addToWorkspace: 'Add to My Workspace',
+              [MeasurementType.Position3D]: 'Measure Point',
+              [MeasurementType.Distance2D]: 'Measure 2D-Distance',
+              [MeasurementType.Distance3D]: 'Measure 3D-Distance',
+              [MeasurementType.Area2D]: 'Measure 2D-Area',
+              [MeasurementType.Area3D]: 'Measure 3D-Area',
+              [MeasurementType.ObliqueHeight2D]: 'Measure 2D-Height',
+              [MeasurementType.Height3D]: 'Measure 3D-Height',
+            },
           },
           value: {
             point: 'Point',
@@ -134,6 +145,16 @@ export default function measurementPlugin(config) {
             [MeasurementType.Area3D]: '3D-Fläche',
             [MeasurementType.ObliqueHeight2D]: '2D-Höhe',
             [MeasurementType.Height3D]: '3D-Höhe',
+            tooltip: {
+              addToWorkspace: 'In Mein Arbeitsbereich hinzufügen',
+              [MeasurementType.Position3D]: 'Punkt messen',
+              [MeasurementType.Distance2D]: '2D-Distanz messen',
+              [MeasurementType.Distance3D]: '3D-Distanz messen',
+              [MeasurementType.Area2D]: '2D-Fläche messen',
+              [MeasurementType.Area3D]: '3D-Fläche messen',
+              [MeasurementType.ObliqueHeight2D]: '2D-Höhe messen',
+              [MeasurementType.Height3D]: '3D-Höhe messen',
+            },
           },
           value: {
             point: 'Punkt',

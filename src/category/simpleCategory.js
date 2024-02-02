@@ -262,12 +262,7 @@ function itemMappingFunction(
  * @returns {function():void}
  */
 export async function createCategory(manager, vcsApp) {
-  const { action: removeAction, destroy: destroyRemoveAction } =
-    createDeleteSelectedAction(
-      manager,
-      'drawing-category-removeSelected',
-      false,
-    );
+  const layer = manager.currentLayer.value;
 
   const { collectionComponent: categoryUiItem, category } =
     await vcsApp.categoryManager.requestCategory(
@@ -286,7 +281,70 @@ export async function createCategory(manager, vcsApp) {
       },
     );
 
-  vcsApp.categoryManager.addActions([removeAction], name, [categoryUiItem.id]);
+  const hideAllAction = {
+    name: 'hideAllAction',
+    icon: '$vcsCheckboxChecked',
+    callback() {
+      const hiddenObjectIds = Object.keys(
+        layer.featureVisibility.hiddenObjects,
+      );
+      if (
+        categoryUiItem.items.value.every(
+          (i) => !hiddenObjectIds.includes(i.name),
+        )
+      ) {
+        layer.featureVisibility.hideObjects(
+          layer.getFeatures().map((feature) => feature.getId()),
+        );
+        if (manager.currentFeatures.value) {
+          manager.currentSession.value.clearSelection?.();
+        }
+        this.icon = '$vcsCheckbox';
+      } else {
+        layer.featureVisibility.clearHiddenObjects();
+        this.icon = '$vcsCheckboxChecked';
+      }
+    },
+  };
+
+  const destroyHideAllAction = layer.featureVisibility.changed.addEventListener(
+    (event) => {
+      if (
+        event.action === FeatureVisibilityAction.HIDE ||
+        event.action === FeatureVisibilityAction.SHOW
+      ) {
+        const hiddenObjectIds = Object.keys(
+          layer.featureVisibility.hiddenObjects,
+        );
+        if (
+          categoryUiItem.items.value.every((i) =>
+            hiddenObjectIds.includes(i.name),
+          )
+        ) {
+          hideAllAction.icon = '$vcsCheckbox';
+        } else if (
+          categoryUiItem.items.value.every(
+            (i) => !hiddenObjectIds.includes(i.name),
+          )
+        ) {
+          hideAllAction.icon = '$vcsCheckboxChecked';
+        } else {
+          hideAllAction.icon = '$vcsCheckboxIndeterminate';
+        }
+      }
+    },
+  );
+
+  const { action: removeAction, destroy: destroyRemoveAction } =
+    createDeleteSelectedAction(
+      manager,
+      'measurement-category-removeSelected',
+      false,
+    );
+
+  vcsApp.categoryManager.addActions([removeAction, hideAllAction], name, [
+    categoryUiItem.id,
+  ]);
 
   vcsApp.categoryManager.addMappingFunction(
     () => {
@@ -302,6 +360,7 @@ export async function createCategory(manager, vcsApp) {
     destroy() {
       vcsApp.categoryManager.removeOwner(name);
       destroyRemoveAction();
+      destroyHideAllAction();
     },
   };
 }

@@ -55,7 +55,7 @@ export const MeasurementGeometryType = {
 function createCreateToolbox(manager) {
   const createCreateButton = (measurementType) => ({
     name: measurementType,
-    title: `measurement.create.${measurementType}`,
+    title: `measurement.create.tooltip.${measurementType}`,
     icon: MeasurementTypeIcon[measurementType],
     geometryType: MeasurementGeometryType[measurementType],
   });
@@ -91,15 +91,21 @@ function createCreateToolbox(manager) {
 
   const destroy = watch(manager.currentSession, () => {
     const currentSession = manager.currentSession.value;
-    toolbox.action.active = !!currentSession;
-    if (toolbox.action.active) {
-      const toolName =
+    if (currentSession?.type === SessionType.SELECT) {
+      toolbox.action.active = false;
+    } else {
+      toolbox.action.active = !!currentSession;
+      if (
+        toolbox.action.active &&
         currentSession?.type === SessionType.CREATE
-          ? manager.currentMeasurementMode.value.type
-          : SessionType.SELECT;
-      const index = toolbox.action.tools.findIndex((t) => t.name === toolName);
-      if (index >= 0 && toolbox.action.currentIndex !== index) {
-        toolbox.action.currentIndex = index;
+      ) {
+        const toolName = manager.currentMeasurementMode.value.type;
+        const index = toolbox.action.tools.findIndex(
+          (t) => t.name === toolName,
+        );
+        if (index >= 0 && toolbox.action.currentIndex !== index) {
+          toolbox.action.currentIndex = index;
+        }
       }
     }
   });
@@ -152,11 +158,11 @@ export function addToolButtons(manager, app) {
       tool.disabled = false;
     });
 
-    for (let i = 0; i < createToolbox.action.tools.length; i++) {
-      if (filteredTools.includes(createToolbox.action.tools[i])) {
-        createToolbox.action.currentIndex = i;
-        break;
-      }
+    const { currentIndex } = createToolbox.action;
+    if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
+      createToolbox.action.currentIndex = createToolbox.action.tools.findIndex(
+        (tool) => tool.name === MeasurementType.Distance2D,
+      );
     }
 
     if (manager.currentFeatures.value) {

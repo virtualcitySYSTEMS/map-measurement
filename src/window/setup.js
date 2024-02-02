@@ -6,15 +6,13 @@ import { name } from '../../package.json';
 import measurementWindow from './measurementWindow.vue';
 import { MeasurementTypeIcon } from '../util/toolbox.js';
 
-export const measurementPluginWindowId = 'MeasurementPluginWindow';
-
 /**
  * @param {MeasurementManager} manager
  * @param {import("@vcmap/ui").VcsUiApp} app
  * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
  * @returns {function():void}
  */
-export function setupMeasurementResultWindow(
+export default function setupMeasurementResultWindow(
   manager,
   app,
   collectionComponent,
@@ -22,11 +20,12 @@ export function setupMeasurementResultWindow(
   let renameListener = () => {};
   const headerTitle = ref();
   const headerIcon = ref();
-  const windowId = `${collectionComponent.id}-editor`;
+  const windowId = 'tempMeasurementWindowId';
 
   const editor = {
     component: measurementWindow,
     provides: {
+      app,
       manager,
     },
     state: {
@@ -73,6 +72,10 @@ export function setupMeasurementResultWindow(
   }
 
   const featuresChangedListener = watch(manager.currentFeatures, () => {
+    if (app.windowManager.has(windowId)) {
+      app.windowManager.remove(windowId);
+    }
+
     setHeader();
 
     // avoid cycle call
@@ -94,17 +97,15 @@ export function setupMeasurementResultWindow(
       currentFeatureIds.includes(i.name),
     );
     if (currentFeatureIds.length === 1 && matchedSelection.length === 0) {
-      if (!app.windowManager.has(windowId)) {
-        app.windowManager.add(
-          {
-            ...editor,
-            id: windowId,
-            parentId: 'category-manager',
-            slot: WindowSlot.DYNAMIC_CHILD,
-          },
-          name,
-        );
-      }
+      app.windowManager.add(
+        {
+          ...editor,
+          id: windowId,
+          parentId: 'category-manager',
+          slot: WindowSlot.DYNAMIC_CHILD,
+        },
+        name,
+      );
     } else {
       collectionComponent.selection.value = matchedSelection;
     }
@@ -140,7 +141,7 @@ export function setupMeasurementResultWindow(
 
   return {
     destroy: () => {
-      app.windowManager.remove(measurementPluginWindowId);
+      app.windowManager.remove(windowId);
       featuresChangedListener();
       selectionChangedListener();
     },

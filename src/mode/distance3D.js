@@ -2,6 +2,7 @@ import {
   defaultVectorStyle,
   GeometryType,
   getFlatCoordinatesFromGeometry,
+  mercatorProjection,
   Projection,
 } from '@vcmap/core';
 import { LineString, Point } from 'ol/geom';
@@ -41,7 +42,11 @@ class Distance3D extends MeasurementMode {
 
     const positions = [];
     for (let i = 0; i < coords.length - 1; i++) {
-      const coordinate = coords[i];
+      const coordinate = Projection.transform(
+        this.projection,
+        mercatorProjection,
+        coords[i],
+      );
       positions.push({
         id: positions.length + 1,
         name: undefined,

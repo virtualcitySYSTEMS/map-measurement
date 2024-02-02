@@ -221,6 +221,7 @@
         @click="addToCategory"
         icon="$vcsComponentsPlus"
         :disabled="isPersistent"
+        :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
       />
       <VcsFormButton @click="createNewMeasurement" variant="filled">
         {{ $t('measurement.create.new') }}
@@ -243,7 +244,16 @@
     VcsFormButton,
   } from '@vcmap/ui';
   import { VRow, VCol, VSheet } from 'vuetify/lib';
-  import { inject, ref, watch, getCurrentInstance, computed } from 'vue';
+  import {
+    inject,
+    ref,
+    watch,
+    getCurrentInstance,
+    computed,
+    onUnmounted,
+    shallowRef,
+  } from 'vue';
+  import { SessionType } from '@vcmap/core';
   import { MeasurementType } from '../util/toolbox.js';
   import { measurementModeSymbol } from '../mode/measurementMode.js';
 
@@ -264,19 +274,31 @@
       VCol,
       VSheet,
     },
-    setup() {
+    setup(props, { attrs }) {
+      const windowId = attrs['window-state'].id;
+      const app = inject('app');
       /** @type {import("../measurementManager.js").MeasurementManager} */
       const manager = inject('manager');
       const values = ref(null);
-      const targetFeature = ref(null);
-      const isPersistent = ref(false);
+      const targetFeature = shallowRef(null);
+      const isPersistent = shallowRef(false);
       const vm = getCurrentInstance().proxy;
       const editActions = ref([
         {
           name: 'editAction',
           icon: '$vcsEditVertices',
+          title: 'measurement.edit',
+          active: computed(
+            () =>
+              manager.currentEditSession.value?.type ===
+              SessionType.EDIT_GEOMETRY,
+          ),
           callback() {
-            manager.startEditSession(targetFeature.value);
+            if (this.active) {
+              manager.stopEditing();
+            } else {
+              manager.startEditSession(targetFeature.value);
+            }
           },
         },
       ]);
@@ -344,6 +366,12 @@
         { immediate: true },
       );
 
+      onUnmounted(() => {
+        if (!isPersistent.value) {
+          manager.currentSession.value?.clearSelection?.();
+        }
+      });
+
       return {
         values,
         headers,
@@ -351,19 +379,15 @@
         isPersistent,
         editActions,
         createNewMeasurement() {
-          if (targetFeature.value) {
-            const featureId = targetFeature.value.getId();
-            if (!manager.category.value.collection.hasKey(featureId)) {
-              manager.currentLayer.value.removeFeaturesById([featureId]);
-            }
-          }
           manager.startCreateSession(values.value.type);
+          app.windowManager.remove(windowId);
         },
         addToCategory() {
-          manager.category.value.addToCollection(
-            manager.currentFeatures.value[0],
-          );
-          isPersistent.value = true;
+          if (targetFeature.value) {
+            manager.category.value.addToCollection(targetFeature.value);
+            manager.currentFeatures.value = [targetFeature.value];
+            isPersistent.value = true;
+          }
         },
         getCopyAction(value) {
           return {

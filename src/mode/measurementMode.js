@@ -1,5 +1,9 @@
 import { Feature } from 'ol';
-import { GeometryType, getTextFromOptions } from '@vcmap/core';
+import {
+  GeometryType,
+  getDefaultProjection,
+  getTextFromOptions,
+} from '@vcmap/core';
 import { MeasurementType } from '../util/toolbox.js';
 
 /**
@@ -36,6 +40,7 @@ class MeasurementMode {
   constructor(options) {
     this.app = options.app;
     this.manager = options.manager;
+    this.projection = getDefaultProjection();
     this.decimalPlaces = 2;
     this.templateFeature = this.createTemplateFeature();
     this.values = this.defaultValues;

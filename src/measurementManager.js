@@ -27,7 +27,7 @@ import Height3D from './mode/height3D.js';
  * @property {import("vue").ShallowRef<null|import("@vcmap/core").EditorSession>} currentEditSession
  * @property {import("vue").ShallowRef<Array<import("ol").Feature>>} currentFeatures
  * @property {import("vue").ShallowRef<import("@vcmap/core").VectorLayer>} currentLayer
- * @property {function(import("@vcmap/core").GeometryType):void} startCreateSession
+ * @property {function(import("util/toolbox.js").MeasurementType):void} startCreateSession
  * @property {function(import("ol").Feature[]=):void} startSelectSession - optional features to select
  * @property {function(import("ol").Feature=):void} startEditSession - optional feature to select
  * @property {function(import("@vcmap/core").TransformationMode):void} startTransformSession
@@ -165,6 +165,7 @@ export function createMeasurementManager(app) {
   const currentLayer = shallowRef(layer);
   let sessionListener = () => {};
   let editSessionListener = () => {};
+  let createSessionListener = () => {};
   let sessionStoppedListener = () => {};
   let editSessionStoppedListener = () => {};
 
@@ -285,13 +286,24 @@ export function createMeasurementManager(app) {
         currentMeasurementMode.value = new Height3D({ app, manager: this });
       }
 
-      setCurrentSession(
-        startCreateFeatureSession(
-          app,
-          currentLayer.value,
-          currentMeasurementMode.value.geometryType,
-        ),
+      currentLayer.value.getFeatures().forEach((f) => {
+        if (!category.value.collection.hasKey(f.getId())) {
+          currentLayer.value.removeFeaturesById([f.getId()]);
+        }
+      });
+
+      createSessionListener();
+      const createSession = startCreateFeatureSession(
+        app,
+        currentLayer.value,
+        currentMeasurementMode.value.geometryType,
       );
+      createSessionListener = createSession.creationFinished.addEventListener(
+        (newFeature) => {
+          this.startSelectSession([newFeature]);
+        },
+      );
+      setCurrentSession(createSession);
     },
     startSelectSession(features) {
       setCurrentSession(

@@ -2,6 +2,7 @@ import {
   defaultVectorStyle,
   GeometryType,
   getFlatCoordinatesFromGeometry,
+  mercatorProjection,
   obliqueGeometry,
   ObliqueMap,
   Projection,
@@ -49,32 +50,39 @@ class Distance2D extends MeasurementMode {
         map instanceof ObliqueMap
           ? feature[obliqueGeometry]
           : feature.getGeometry();
+
       const coords = getFlatCoordinatesFromGeometry(geometry);
-      const positions = [];
-      for (let i = 0; i < coords.length; i++) {
-        const coordinate = coords[i];
-        positions.push({
-          id: positions.length + 1,
-          name: undefined,
-          x: coordinate[0].toFixed(this.decimalPlaces),
-          y: coordinate[1].toFixed(this.decimalPlaces),
-          z: 0,
-        });
-      }
+
       if (map instanceof ObliqueMap) {
         this.calcMeasurementResolve = resolve;
         this.calcMeasurementTimeout = setTimeout(async () => {
           this.calcMeasurementResolve = undefined;
           this.calcMeasurementTimeout = undefined;
-          const wgs84Coords = new Array(coords.length);
-          const promises = coords.map((c, i) => {
-            return transformFromImage(map.currentImage, c, {
-              dataProjection: wgs84Projection,
-            }).then((res) => {
-              wgs84Coords[i] = res.coords;
+          const wgs84Coords = await Promise.all(
+            coords.map((c) => {
+              return transformFromImage(map.currentImage, c, {
+                dataProjection: wgs84Projection,
+              }).then((res) => {
+                return res.coords;
+              });
+            }),
+          );
+
+          const positions = [];
+          for (let i = 0; i < wgs84Coords.length; i++) {
+            const coordinate = Projection.transform(
+              this.projection,
+              wgs84Projection,
+              wgs84Coords[i],
+            );
+            positions.push({
+              id: positions.length + 1,
+              name: undefined,
+              x: coordinate[0].toFixed(this.decimalPlaces),
+              y: coordinate[1].toFixed(this.decimalPlaces),
+              z: 0,
             });
-          });
-          await Promise.all(promises);
+          }
           this.values.vertexPositions = positions;
           this.values.distance = this.getValue(
             this.calculateDistance(wgs84Coords),
@@ -82,6 +90,21 @@ class Distance2D extends MeasurementMode {
           resolve(true);
         }, 30);
       } else {
+        const positions = [];
+        for (let i = 0; i < coords.length; i++) {
+          const coordinate = Projection.transform(
+            this.projection,
+            mercatorProjection,
+            coords[i],
+          );
+          positions.push({
+            id: positions.length + 1,
+            name: undefined,
+            x: coordinate[0].toFixed(this.decimalPlaces),
+            y: coordinate[1].toFixed(this.decimalPlaces),
+            z: 0,
+          });
+        }
         for (let i = 0; i < coords.length; i++) {
           Projection.mercatorToWgs84(coords[i], true);
         }

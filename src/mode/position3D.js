@@ -1,4 +1,9 @@
-import { GeometryType, getFlatCoordinatesFromGeometry } from '@vcmap/core';
+import {
+  GeometryType,
+  getFlatCoordinatesFromGeometry,
+  mercatorProjection,
+  Projection,
+} from '@vcmap/core';
 import { Point } from 'ol/geom.js';
 import { MeasurementType } from '../util/toolbox.js';
 import MeasurementMode from './measurementMode.js';
@@ -21,13 +26,18 @@ class Position3D extends MeasurementMode {
 
     const geometry = feature.getGeometry();
     const coords = getFlatCoordinatesFromGeometry(geometry);
+    const point = Projection.transform(
+      this.projection,
+      mercatorProjection,
+      coords[0],
+    );
     const positions = [];
     positions.push({
       id: '',
       name: undefined,
-      x: coords[0][0].toFixed(this.decimalPlaces),
-      y: coords[0][1].toFixed(this.decimalPlaces),
-      z: coords[0][2].toFixed(this.decimalPlaces),
+      x: point[0].toFixed(this.decimalPlaces),
+      y: point[1].toFixed(this.decimalPlaces),
+      z: point[2].toFixed(this.decimalPlaces),
     });
     this.values.vertexPositions = positions;
     return Promise.resolve(true);
