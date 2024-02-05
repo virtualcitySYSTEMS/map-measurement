@@ -63,7 +63,7 @@ export default function setupMeasurementResultWindow(
       };
       headerTitle.value = features[0].get('title')
         ? features[0].get('title')
-        : 'Measurement';
+        : 'measurement.header.title'
     }
     if (manager.currentMeasurementMode.value) {
       headerIcon.value =
