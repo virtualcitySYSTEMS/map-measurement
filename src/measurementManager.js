@@ -314,6 +314,9 @@ export function createMeasurementManager(app) {
         app,
         currentLayer.value,
         currentMeasurementMode.value.geometryType,
+        currentMeasurementMode.value
+          .createTemplateFeature()
+          .get('olcs_altitudeMode'),
       );
       createSessionListener = createSession.creationFinished.addEventListener(
         (newFeature) => {
