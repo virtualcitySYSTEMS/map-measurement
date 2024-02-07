@@ -120,10 +120,9 @@ export default function measurementPlugin(config) {
             rename: 'Rename',
             edit: 'Edit',
             remove: 'Remove',
-            removeSelected: 'Remove selected measurements',
-            removeAll: 'Remove all measurements',
-            exportSelected: 'Export selected measurements',
-            exportAll: 'Export all measurements',
+            removeSelected: 'Remove selection',
+            exportSelected: 'Export selection',
+            import: 'Import',
           },
           hint: {
             oblique:
@@ -180,10 +179,9 @@ export default function measurementPlugin(config) {
             rename: 'Umbenennen',
             edit: 'Editieren',
             remove: 'Entfernen',
-            removeSelected: 'Selektierte Messungen löschen',
-            removeAll: 'Alle Messungen löschen',
-            exportSelected: 'Selektierte Messungen exportieren',
-            exportAll: 'Alle Messungen exportieren',
+            removeSelected: 'Selektion löschen',
+            exportSelected: 'Selektion exportieren',
+            import: 'Importieren',
           },
           hint: {
             oblique:

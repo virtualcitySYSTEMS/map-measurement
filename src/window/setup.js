@@ -1,10 +1,19 @@
 import { watch, ref } from 'vue';
 import { SessionType } from '@vcmap/core';
-import { makeEditorCollectionComponentClass, WindowSlot } from '@vcmap/ui';
+import {
+  createListExportAction,
+  createListImportAction,
+  makeEditorCollectionComponentClass,
+  WindowSlot,
+} from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
 import { name } from '../../package.json';
 import measurementWindow from './measurementWindow.vue';
 import { MeasurementTypeIcon } from '../util/toolbox.js';
+import {
+  createExportCallback,
+  createImportCallback,
+} from '../util/actionHelper.js';
 
 /**
  * @param {MeasurementManager} manager
@@ -36,11 +45,31 @@ export default function setupMeasurementResultWindow(
     },
   };
 
-  makeEditorCollectionComponentClass(app, collectionComponent, {
-    editor: () => ({
-      ...editor,
-    }),
-  });
+  const editorCollectionComponent = makeEditorCollectionComponentClass(
+    app,
+    collectionComponent,
+    {
+      editor: () => ({
+        ...editor,
+      }),
+    },
+  );
+
+  const { action: exportAction, destroy: destroyExportAction } =
+    createListExportAction(
+      collectionComponent.selection,
+      () => createExportCallback(manager, collectionComponent),
+      name,
+    );
+
+  const { action: importAction, destroy: destroyImportAction } =
+    createListImportAction(
+      (files) => createImportCallback(app, manager, files),
+      app.windowManager,
+      name,
+      'category-manager',
+    );
+  editorCollectionComponent.addActions([importAction, exportAction]);
 
   function setHeader() {
     renameListener();
@@ -144,6 +173,8 @@ export default function setupMeasurementResultWindow(
       app.windowManager.remove(windowId);
       featuresChangedListener();
       selectionChangedListener();
+      destroyImportAction();
+      destroyExportAction();
     },
   };
 }

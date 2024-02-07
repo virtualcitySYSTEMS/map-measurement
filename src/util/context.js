@@ -55,7 +55,7 @@ export default function addContextMenu(app, manager, owner) {
       );
 
       contextEntries.push(
-        createDeleteSelectedAction(manager, 'draw-context-delete').action,
+        createDeleteSelectedAction(manager, null, 'draw-context-delete').action,
       );
     } else {
       manager.currentSession.value?.clearSelection?.();

@@ -72,7 +72,7 @@ class SimpleMeasurementCategory extends Category {
   addToCollection(feature) {
     if (!this.collection.hasKey(feature.getId())) {
       if (!feature.get('title')) {
-        const { type } = this._manager.currentMeasurementMode.value;
+        const { type } = feature[measurementModeSymbol];
         setTitleOnFeature(feature, this._layer, type);
       }
       this.collection.add({
@@ -338,11 +338,12 @@ export async function createCategory(manager, vcsApp) {
   const { action: removeAction, destroy: destroyRemoveAction } =
     createDeleteSelectedAction(
       manager,
+      categoryUiItem,
       'measurement-category-removeSelected',
       false,
     );
 
-  vcsApp.categoryManager.addActions([removeAction, hideAllAction], name, [
+  vcsApp.categoryManager.addActions([hideAllAction, removeAction], name, [
     categoryUiItem.id,
   ]);
 

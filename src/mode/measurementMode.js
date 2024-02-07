@@ -36,6 +36,11 @@ import { MeasurementType } from '../util/toolbox.js';
  */
 export const measurementModeSymbol = Symbol('measurementModeSymbol');
 
+/**
+ * @type {string}
+ */
+export const measurementTypeProperty = 'vcs_measurement_type';
+
 class MeasurementMode {
   constructor(options) {
     this.app = options.app;
@@ -107,7 +112,9 @@ class MeasurementMode {
 
   // eslint-disable-next-line class-methods-use-this
   createTemplateFeature() {
-    return new Feature();
+    const feature = new Feature();
+    feature.set(measurementTypeProperty, this.type);
+    return feature;
   }
 
   static getDefaultText() {

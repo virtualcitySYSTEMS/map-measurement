@@ -1,5 +1,6 @@
-import { SessionType } from '@vcmap/core';
+import { parseGeoJSON, writeGeoJSON } from '@vcmap/core';
 import { watch } from 'vue';
+import { downloadText, NotificationType } from '@vcmap/ui';
 
 /**
  *
@@ -30,53 +31,107 @@ export function createHideSelectedAction(manager, id) {
 /**
  *
  * @param {import('../measurementManager.js').MeasurementManager} manager The measurement manager
+ * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
  * @param {string | number} id The action id
  * @param {boolean} [hasIcon=true] Whether the action should have an icon or not.
  * @returns {{action: import("@vcmap/ui").VcsAction, destroy: import('vue').WatchStopHandle}} A VcsAction for deleting selected features and the corresponding destroy function.
  */
-export function createDeleteSelectedAction(manager, id, hasIcon = true) {
-  const removeSelectedTitle = 'measurement.category.removeSelected';
-  const removeAllTitle = 'measurement.category.removeAll';
+export function createDeleteSelectedAction(
+  manager,
+  collectionComponent,
+  id,
+  hasIcon = true,
+) {
   const removeAction = {
     id,
     name: 'measurement.category.removeSelected',
     icon: hasIcon ? '$vcsTrashCan' : undefined,
     callback() {
-      const layer = manager.getDefaultLayer();
-      if (
-        manager.currentLayer.value === layer &&
-        manager.currentFeatures.value?.length > 0 &&
-        manager.currentSession.value?.currentFeatures?.length
-      ) {
-        const ids = manager.currentFeatures.value.map((f) => f.getId());
-        manager.currentSession.value.clearSelection();
-        manager.currentLayer.value.removeFeaturesById(ids);
-      } else if (manager.currentLayer.value.getFeatures().length) {
-        const ids = manager.currentLayer.value
-          .getFeatures()
-          .map((f) => f.getId());
-        manager.currentLayer.value.removeFeaturesById(ids);
+      if (collectionComponent) {
+        manager.currentLayer.value.removeFeaturesById(
+          collectionComponent.selection.value.map((s) => s.name),
+        );
+      } else if (manager.currentFeatures.value?.length > 0) {
+        manager.currentLayer.value.removeFeaturesById(
+          manager.currentFeatures.value.map((f) => f.getId()),
+        );
       }
     },
   };
 
-  const destroyWatcher = watch(
-    manager.currentFeatures,
-    (currentFeatures) => {
-      if (
-        manager.currentSession.value?.type === SessionType.SELECT &&
-        currentFeatures?.length
-      ) {
-        removeAction.title = removeSelectedTitle;
-      } else {
-        removeAction.title = removeAllTitle;
-      }
-    },
-    { immediate: true },
-  );
+  let destroyWatcher = () => {};
+  if (collectionComponent) {
+    destroyWatcher = watch(
+      collectionComponent.selection,
+      (selection) => {
+        removeAction.disabled = selection.length === 0;
+      },
+      { immediate: true },
+    );
+  }
 
   return {
     action: removeAction,
     destroy: destroyWatcher,
   };
+}
+
+/**
+ * @param {import("@vcmap/ui").VcsUiApp} app The VcsUiApp
+ * @param {import('../editorManager.js').EditorManager} manager The editor manager
+ * @param {files: File[]} files The input files
+ */
+export function createImportCallback(app, manager, files) {
+  files.forEach((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      try {
+        const { features, style, vcsMeta } = parseGeoJSON(text, {
+          dynamicStyle: true,
+        });
+        features.forEach((f) => manager.addMeasurement(f));
+        manager.currentLayer.value.addFeatures(features);
+        if (style) {
+          manager.currentLayer.value.setStyle(style);
+        }
+        manager.currentLayer.value.setVcsMeta(vcsMeta);
+      } catch (err) {
+        app.notifier.add({
+          message: err.message,
+          type: NotificationType.ERROR,
+        });
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function exportFeatures(features, layer, writeOptions) {
+  const text = writeGeoJSON(
+    {
+      features,
+      vcsMeta: layer.getVcsMeta(writeOptions),
+    },
+    writeOptions,
+  );
+  downloadText(text, 'measurement.json');
+}
+
+/**
+ * Creates an action that exports all selected features. If no features are selected, all features of the editorManagers layer are exported.
+ * @param {import('../editorManager.js').EditorManager} manager The editorManager
+ * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
+ */
+export function createExportCallback(manager, collectionComponent) {
+  const writeOptions = {
+    writeStyle: true,
+    embedIcons: true,
+    prettyPrint: true,
+    writeId: true,
+  };
+  const selectedFeatures = manager.currentLayer.value.getFeaturesById(
+    collectionComponent.selection.value.map((s) => s.name),
+  );
+  exportFeatures(selectedFeatures, manager.currentLayer.value, writeOptions);
 }
