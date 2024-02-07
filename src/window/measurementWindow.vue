@@ -169,7 +169,7 @@
           </v-col>
         </v-row>
         <VcsFormSection :expandable="true" heading="Sketch">
-          <div class="sketchBackground" />
+          <v-img :src="sketchIcon" alt="plugin-icon" />
         </VcsFormSection>
         <v-row no-gutters class="py-0 px-1">
           <v-col>
@@ -229,12 +229,6 @@
     </div>
   </v-sheet>
 </template>
-<style scoped>
-  .sketchBackground {
-    height: 220px;
-    background-image: url('../../plugin-assets/sketch.png');
-  }
-</style>
 <script>
   import {
     VcsDataTable,
@@ -242,8 +236,9 @@
     VcsLabel,
     VcsActionButtonList,
     VcsFormButton,
+    getPluginAssetUrl,
   } from '@vcmap/ui';
-  import { VRow, VCol, VSheet } from 'vuetify/lib';
+  import { VRow, VCol, VSheet, VImg } from 'vuetify/lib';
   import {
     inject,
     ref,
@@ -256,6 +251,7 @@
   import { SessionType } from '@vcmap/core';
   import { MeasurementType } from '../util/toolbox.js';
   import { measurementModeSymbol } from '../mode/measurementMode.js';
+  import { name } from '../../package.json';
 
   export default {
     name: 'MeasurementWindow',
@@ -273,6 +269,7 @@
       VRow,
       VCol,
       VSheet,
+      VImg,
     },
     setup(props, { attrs }) {
       const windowId = attrs['window-state'].id;
@@ -378,6 +375,7 @@
         targetFeature,
         isPersistent,
         editActions,
+        sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
         createNewMeasurement() {
           manager.startCreateSession(values.value.type);
           app.windowManager.remove(windowId);
