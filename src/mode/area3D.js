@@ -1,6 +1,7 @@
 import {
   defaultVectorStyle,
   GeometryType,
+  getDefaultHighlightStyle,
   getFlatCoordinatesFromGeometry,
   Projection,
 } from '@vcmap/core';
@@ -8,7 +9,7 @@ import { Polygon } from 'ol/geom.js';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
 import { Style } from 'ol/style.js';
 import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode from './measurementMode.js';
+import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
 
 /** @type {Cesium/Cartesian3} */
 let scratchAB = new Cartesian3();
@@ -93,25 +94,28 @@ class Area3D extends MeasurementMode {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new Polygon([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');
+    return templateFeature;
+  }
 
+  static getStyleFunction(highlight) {
+    const defaultStyle = highlight
+      ? getDefaultHighlightStyle()
+      : defaultVectorStyle.style;
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
       geometry: (f) => {
         const position = f.getGeometry().getInteriorPoint();
         const labelCoords = position.getCoordinates();
-        labelCoords[2] = this.values.height;
+        labelCoords[2] = f[measurementModeSymbol].values.height;
         position.setCoordinates(labelCoords);
         return position;
       },
     });
-
-    const area3DStyleFunction = () => {
-      text.setText(this.values.area);
-      return [defaultVectorStyle.style, labelStyle];
+    return (feature) => {
+      text.setText(feature[measurementModeSymbol].values.area);
+      return [defaultStyle, labelStyle];
     };
-    templateFeature.setStyle(area3DStyleFunction);
-    return templateFeature;
   }
 }
 

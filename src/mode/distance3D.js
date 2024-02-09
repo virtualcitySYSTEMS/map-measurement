@@ -1,13 +1,11 @@
 import {
-  defaultVectorStyle,
   GeometryType,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
   Projection,
 } from '@vcmap/core';
-import { LineString, Point } from 'ol/geom';
+import { LineString } from 'ol/geom';
 import { Cartesian3 } from '@vcmap-cesium/engine';
-import { Style } from 'ol/style.js';
 import MeasurementMode from './measurementMode.js';
 import { MeasurementType } from '../util/toolbox.js';
 
@@ -92,22 +90,6 @@ class Distance3D extends MeasurementMode {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');
-    const text = MeasurementMode.getDefaultText();
-    const labelStyle = new Style({
-      text,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
-        if (coords.length > 1) {
-          return new Point(coords[coords.length - 1]);
-        }
-        return f.getGeometry();
-      },
-    });
-    const distance3DStyleFunction = () => {
-      text.setText(this.values.distance);
-      return [defaultVectorStyle.style, labelStyle];
-    };
-    templateFeature.setStyle(distance3DStyleFunction);
     return templateFeature;
   }
 }

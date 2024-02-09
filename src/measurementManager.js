@@ -9,6 +9,7 @@ import {
   mercatorProjection,
   markVolatile,
   maxZIndex,
+  VectorStyleItem,
 } from '@vcmap/core';
 import { unByKey } from 'ol/Observable.js';
 import Distance2D from './mode/distance2D.js';
@@ -23,6 +24,7 @@ import {
   measurementTypeProperty,
 } from './mode/measurementMode.js';
 import Height3D from './mode/height3D.js';
+import getMeasurementStyleFunction from './mode/styleHelper.js';
 
 /**
  * @typedef {Object} MeasurementManager
@@ -173,6 +175,12 @@ export function createMeasurementManager(app) {
   const category = shallowRef(null);
 
   const layer = createSimpleMeasurementLayer(app);
+
+  const highlightStyle = new VectorStyleItem({});
+  highlightStyle.style = getMeasurementStyleFunction(true);
+
+  layer.setStyle(getMeasurementStyleFunction(false));
+
   const currentLayer = shallowRef(layer);
   let sessionListener = () => {};
   let editSessionListener = () => {};
@@ -234,6 +242,7 @@ export function createMeasurementManager(app) {
             currentLayer.value,
             selectInteractionId,
             selectionMode,
+            highlightStyle,
           ),
         );
       } else {
@@ -332,6 +341,7 @@ export function createMeasurementManager(app) {
           currentLayer.value,
           selectInteractionId,
           undefined,
+          highlightStyle,
         ),
       );
       if (features) {

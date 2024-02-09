@@ -1,10 +1,14 @@
-import { defaultVectorStyle, GeometryType, Projection } from '@vcmap/core';
+import {
+  defaultVectorStyle,
+  GeometryType,
+  getDefaultHighlightStyle,
+  Projection,
+} from '@vcmap/core';
 import { LineString, Point } from 'ol/geom.js';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
-import { Fill, Stroke, Style } from 'ol/style.js';
-import CircleStyle from 'ol/style/Circle.js';
+import { Style } from 'ol/style.js';
 import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode from './measurementMode.js';
+import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
 
 const cartesianMap = [
   { key: 'height', indices: [0, 1] },
@@ -93,13 +97,15 @@ class Height3D extends MeasurementMode {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');
+    return templateFeature;
+  }
 
+  static getStyleFunction(highlight) {
+    const defaultStyle = highlight
+      ? getDefaultHighlightStyle()
+      : defaultVectorStyle.style;
     const triangleStyle = new Style({
-      stroke: new Stroke({ color: '#09465e', width: 3 }),
-      image: new CircleStyle({
-        fill: new Fill({ color: '#09465e' }),
-        radius: 5,
-      }),
+      stroke: defaultStyle.getStroke(),
       geometry: (f) => {
         const coords = f.getGeometry().getCoordinates();
         if (coords.length === 2) {
@@ -165,21 +171,14 @@ class Height3D extends MeasurementMode {
       },
     });
 
-    const height3DStyleFunction = () => {
-      heightStyleText.setText(this.values.height);
-      horizontalStyleText.setText(this.values.horizontal);
-      distanceStyleText.setText(this.values.distance);
-      return [
-        defaultVectorStyle.style,
-        triangleStyle,
-        heightStyle,
-        horizontalStyle,
-        distanceStyle,
-      ];
+    return (feature) => {
+      heightStyleText.setText(feature[measurementModeSymbol].values.height);
+      horizontalStyleText.setText(
+        feature[measurementModeSymbol].values.horizontal,
+      );
+      distanceStyleText.setText(feature[measurementModeSymbol].values.distance);
+      return [triangleStyle, heightStyle, horizontalStyle, distanceStyle];
     };
-    templateFeature.setStyle(height3DStyleFunction);
-
-    return templateFeature;
   }
 }
 

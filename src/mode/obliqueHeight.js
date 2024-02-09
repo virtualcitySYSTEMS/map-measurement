@@ -6,13 +6,15 @@ import {
   transformFromImage,
   transformToImage,
   defaultVectorStyle,
+  getDefaultHighlightStyle,
+  originalFeatureSymbol,
 } from '@vcmap/core';
 import { Cartesian3, Matrix3 } from '@vcmap-cesium/engine';
 import { transform } from 'ol/proj';
 import { LineString, Point } from 'ol/geom';
 import { Style } from 'ol/style.js';
 import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode from './measurementMode.js';
+import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
 
 class ObliqueHeight extends MeasurementMode {
   constructor(options) {
@@ -21,6 +23,8 @@ class ObliqueHeight extends MeasurementMode {
     this.selfCall = false;
     this.measureVecGround = new Cartesian3();
     this.measureVecOrientation = new Cartesian3();
+
+    this.startCoordinateTransformationPromise = null;
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -49,135 +53,144 @@ class ObliqueHeight extends MeasurementMode {
     const map = this.app.maps.activeMap;
     const { currentImage } = map;
 
-    return new Promise((resolve) => {
-      if (!this.set && coords.length === 2) {
-        this.startUndistorted = currentImage.meta.radialDistortionCoordinate(
-          coords[0],
-          true,
-        );
-        this.startDistorted = coords[0].slice();
-        this.measureVecGround = Cartesian3.fromElements(
-          this.startUndistorted[0],
-          this.startUndistorted[1],
-          0,
-          this.measureVecGround,
-        );
-        transformFromImage(currentImage, coords[0])
-          .then((res) => {
-            this.startPointRealWorld = res.coords;
-            const lifted = res.coords.slice();
-            lifted[2] += 10;
-            return transformToImage(currentImage, lifted);
-          })
-          .then((res) => {
-            this.liftedUndistorted =
-              currentImage.meta.radialDistortionCoordinate(res.coords, true);
-            const liftedCoord = Cartesian3.fromElements(
-              this.liftedUndistorted[0],
-              this.liftedUndistorted[1],
-              0,
-            );
-            //     this.onHold = false;
-            this.set = true;
-            this.measureVecOrientation = Cartesian3.subtract(
-              liftedCoord,
-              this.measureVecGround,
-              this.measureVecOrientation,
-            );
-            this.measureVecOrientation = Cartesian3.normalize(
-              this.measureVecOrientation,
-              this.measureVecOrientation,
-            );
-            this.selfCall = true;
-            feature
-              .getGeometry()
-              .setCoordinates([this.startDistorted, this.startDistorted]);
-            resolve(true);
-          });
-      } else if (this.set) {
-        if (coords.length === 3) {
-          this.manager.currentSession.value.finish();
-          this.set = false;
-          this.selfCall = false;
-          resolve(true);
-        }
-        const mouseImageCoordinateUndistorted =
-          currentImage.meta.radialDistortionCoordinate(coords[1], true);
-
-        const perpendicularLine = [
-          [
-            mouseImageCoordinateUndistorted[0],
-            mouseImageCoordinateUndistorted[1],
-          ],
-          [
-            mouseImageCoordinateUndistorted[0] + 1,
-            mouseImageCoordinateUndistorted[1],
-          ],
-        ];
-
-        const intersectionMouse2GroundHeight = checkLineIntersection(
-          // XXX find replacement
-          perpendicularLine,
-          [this.startUndistorted, this.liftedUndistorted],
-        );
-
-        const measurementCurrentPoint = [
-          intersectionMouse2GroundHeight.x,
-          intersectionMouse2GroundHeight.y,
-        ];
-        const measurementCurrentPointCorrected =
-          currentImage.meta.radialDistortionCoordinate(
-            measurementCurrentPoint,
-            false,
+    if (!this.set && coords.length === 2) {
+      if (!this.startCoordinateTransformationPromise) {
+        this.startCoordinateTransformationPromise = new Promise((resolve) => {
+          this.startUndistorted = currentImage.meta.radialDistortionCoordinate(
+            coords[0],
+            true,
           );
-        measurementCurrentPointCorrected.push(0);
-
-        const measureVecMouse = new Cartesian3(
-          measurementCurrentPoint[0],
-          measurementCurrentPoint[1],
-          0,
-        );
-        let measureVecCurrOrientation = Cartesian3.subtract(
-          measureVecMouse,
-          this.measureVecGround,
-          new Cartesian3(),
-        );
-        measureVecCurrOrientation = Cartesian3.normalize(
-          measureVecCurrOrientation,
-          measureVecCurrOrientation,
-        );
-        const dot = Cartesian3.dot(
-          this.measureVecOrientation,
-          measureVecCurrOrientation,
-        );
-        this.selfCall = true;
-
-        let finalCoords;
-        if (dot < 0 || Number.isNaN(dot)) {
-          this.values.height = this.getValue(0);
-          finalCoords = [this.startDistorted, this.startDistorted];
-        } else {
-          const heightPos = this.findVertical3DPositionRegardingPixel(
-            map,
-            measurementCurrentPoint,
-            this.startPointRealWorld,
+          this.startDistorted = coords[0].slice();
+          this.measureVecGround = Cartesian3.fromElements(
+            this.startUndistorted[0],
+            this.startUndistorted[1],
+            0,
+            this.measureVecGround,
           );
-          this.values.height = this.getValue(
-            distance3D(this.startPointRealWorld, heightPos),
-          );
-          finalCoords = [this.startDistorted, measurementCurrentPointCorrected];
-        }
-
-        feature.getGeometry().setCoordinates(finalCoords);
-        resolve(true);
+          transformFromImage(currentImage, coords[0])
+            .then((res) => {
+              this.startPointRealWorld = res.coords;
+              const lifted = res.coords.slice();
+              lifted[2] += 10;
+              return transformToImage(currentImage, lifted);
+            })
+            .then((res) => {
+              this.liftedUndistorted =
+                currentImage.meta.radialDistortionCoordinate(res.coords, true);
+              const liftedCoord = Cartesian3.fromElements(
+                this.liftedUndistorted[0],
+                this.liftedUndistorted[1],
+                0,
+              );
+              //     this.onHold = false;
+              this.set = true;
+              this.measureVecOrientation = Cartesian3.subtract(
+                liftedCoord,
+                this.measureVecGround,
+                this.measureVecOrientation,
+              );
+              this.measureVecOrientation = Cartesian3.normalize(
+                this.measureVecOrientation,
+                this.measureVecOrientation,
+              );
+              this.selfCall = true;
+              feature
+                .getGeometry()
+                .setCoordinates([this.startDistorted, this.startDistorted]);
+              resolve(true);
+            });
+        });
       }
-    });
+      return this.startCoordinateTransformationPromise;
+    } else if (this.set) {
+      if (coords.length === 3) {
+        this.manager.currentSession.value.finish();
+        this.selfCall = false;
+        return Promise.resolve(true);
+      }
+      const mouseImageCoordinateUndistorted =
+        currentImage.meta.radialDistortionCoordinate(coords[1], true);
+
+      const perpendicularLine = [
+        [
+          mouseImageCoordinateUndistorted[0],
+          mouseImageCoordinateUndistorted[1],
+        ],
+        [
+          mouseImageCoordinateUndistorted[0] + 1,
+          mouseImageCoordinateUndistorted[1],
+        ],
+      ];
+
+      const intersectionMouse2GroundHeight = checkLineIntersection(
+        // XXX find replacement
+        perpendicularLine,
+        [this.startUndistorted, this.liftedUndistorted],
+      );
+
+      const measurementCurrentPoint = [
+        intersectionMouse2GroundHeight.x,
+        intersectionMouse2GroundHeight.y,
+      ];
+      const measurementCurrentPointCorrected =
+        currentImage.meta.radialDistortionCoordinate(
+          measurementCurrentPoint,
+          false,
+        );
+      measurementCurrentPointCorrected.push(0);
+
+      const measureVecMouse = new Cartesian3(
+        measurementCurrentPoint[0],
+        measurementCurrentPoint[1],
+        0,
+      );
+      let measureVecCurrOrientation = Cartesian3.subtract(
+        measureVecMouse,
+        this.measureVecGround,
+        new Cartesian3(),
+      );
+      measureVecCurrOrientation = Cartesian3.normalize(
+        measureVecCurrOrientation,
+        measureVecCurrOrientation,
+      );
+      const dot = Cartesian3.dot(
+        this.measureVecOrientation,
+        measureVecCurrOrientation,
+      );
+      this.selfCall = true;
+
+      let finalCoords;
+      if (dot < 0 || Number.isNaN(dot)) {
+        this.values.height = this.getValue(0);
+        finalCoords = [this.startDistorted, this.startDistorted];
+      } else {
+        const heightPos = this.findVertical3DPositionRegardingPixel(
+          map,
+          measurementCurrentPoint,
+          this.startPointRealWorld,
+        );
+        this.values.height = this.getValue(
+          distance3D(this.startPointRealWorld, heightPos),
+        );
+        finalCoords = [this.startDistorted, measurementCurrentPointCorrected];
+      }
+
+      feature.getGeometry().setCoordinates(finalCoords);
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
   }
 
   createTemplateFeature() {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
+    return templateFeature;
+  }
 
+  static getStyleFunction(highlight) {
+    const defaultStyle = highlight
+      ? getDefaultHighlightStyle()
+      : defaultVectorStyle.style;
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
@@ -189,14 +202,12 @@ class ObliqueHeight extends MeasurementMode {
         return f.getGeometry();
       },
     });
-
-    const obliqueHeightStyleFunction = () => {
-      text.setText(this.values.height);
-      return [defaultVectorStyle.style, labelStyle];
+    return (feature) => {
+      text.setText(
+        feature[originalFeatureSymbol]?.[measurementModeSymbol].values.height,
+      );
+      return [defaultStyle, labelStyle];
     };
-    templateFeature.setStyle(obliqueHeightStyleFunction);
-
-    return templateFeature;
   }
 
   // eslint-disable-next-line class-methods-use-this

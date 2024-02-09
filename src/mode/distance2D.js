@@ -1,6 +1,7 @@
 import {
   defaultVectorStyle,
   GeometryType,
+  getDefaultHighlightStyle,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
   obliqueGeometry,
@@ -8,12 +9,13 @@ import {
   Projection,
   transformFromImage,
   wgs84Projection,
+  originalFeatureSymbol,
 } from '@vcmap/core';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
 import { LineString, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
 import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode from './measurementMode.js';
+import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
 
 class Distance2D extends MeasurementMode {
   constructor(options) {
@@ -132,6 +134,13 @@ class Distance2D extends MeasurementMode {
   createTemplateFeature() {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
+    return templateFeature;
+  }
+
+  static getStyleFunction(highlight) {
+    const defaultStyle = highlight
+      ? getDefaultHighlightStyle()
+      : defaultVectorStyle.style;
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
@@ -143,12 +152,13 @@ class Distance2D extends MeasurementMode {
         return f.getGeometry();
       },
     });
-    const distance2DStyleFunction = () => {
-      text.setText(this.values.distance);
-      return [defaultVectorStyle.style, labelStyle];
+    return (feature) => {
+      const featureToUse = feature[originalFeatureSymbol]
+        ? feature[originalFeatureSymbol]
+        : feature;
+      text.setText(featureToUse[measurementModeSymbol]?.values.distance);
+      return [defaultStyle, labelStyle];
     };
-    templateFeature.setStyle(distance2DStyleFunction);
-    return templateFeature;
   }
 }
 

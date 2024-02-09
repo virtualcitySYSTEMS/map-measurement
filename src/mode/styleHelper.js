@@ -1,0 +1,60 @@
+import {
+  defaultVectorStyle,
+  getDefaultHighlightStyle,
+  originalFeatureSymbol,
+} from '@vcmap/core';
+import { measurementModeSymbol } from './measurementMode.js';
+import { MeasurementType } from '../util/toolbox.js';
+import Distance2D from './distance2D.js';
+import Area2D from './area2D.js';
+import Area3D from './area3D.js';
+import Height3D from './height3D.js';
+import ObliqueHeight from './obliqueHeight.js';
+
+export default function getMeasurementStyleFunction(highlight) {
+  const distanceFunction = Distance2D.getStyleFunction(highlight);
+  const area2DFunction = Area2D.getStyleFunction(highlight);
+  const area3DFunction = Area3D.getStyleFunction(highlight);
+  const height3DFunction = Height3D.getStyleFunction(highlight);
+  const obliqueHeightFunction = ObliqueHeight.getStyleFunction(highlight);
+  const defaultStyle = highlight
+    ? getDefaultHighlightStyle()
+    : defaultVectorStyle.style;
+
+  return (feature) => {
+    const featureToCheck = feature[originalFeatureSymbol]
+      ? feature[originalFeatureSymbol]
+      : feature;
+    if (featureToCheck[measurementModeSymbol]) {
+      if (
+        featureToCheck[measurementModeSymbol].type ===
+        MeasurementType.Distance2D
+      ) {
+        return distanceFunction(feature);
+      } else if (
+        featureToCheck[measurementModeSymbol].type ===
+        MeasurementType.Distance3D
+      ) {
+        return distanceFunction(feature);
+      } else if (
+        featureToCheck[measurementModeSymbol].type === MeasurementType.Area2D
+      ) {
+        return area2DFunction(feature);
+      } else if (
+        featureToCheck[measurementModeSymbol].type === MeasurementType.Area3D
+      ) {
+        return area3DFunction(feature);
+      } else if (
+        featureToCheck[measurementModeSymbol].type === MeasurementType.Height3D
+      ) {
+        return height3DFunction(feature);
+      } else if (
+        featureToCheck[measurementModeSymbol].type ===
+        MeasurementType.ObliqueHeight2D
+      ) {
+        return obliqueHeightFunction(feature);
+      }
+    }
+    return defaultStyle;
+  };
+}
