@@ -59,7 +59,7 @@ class SimpleMeasurementCategory extends Category {
   constructor(options) {
     super(options);
     /**
-     * @type {import("@vcmap/core").VectorLayer}
+     * @type {import("@vcmap/core").VectorLayer|null}
      * @private
      */
     this._layer = null;
@@ -113,7 +113,10 @@ class SimpleMeasurementCategory extends Category {
 
   mergeOptions(options) {
     super.mergeOptions(options);
-    this._setCurrentLayer(options.layer);
+    this._manager.category.value = undefined;
+    this._manager = options.manager;
+    this._setCurrentLayer(options.manager.getDefaultLayer());
+    this._manager.category.value = this;
   }
 
   _itemAdded(item) {
@@ -152,6 +155,13 @@ class SimpleMeasurementCategory extends Category {
       name: item.name,
       feature: writeGeoJSONFeature(item.feature),
     };
+  }
+
+  destroy() {
+    this._layerListeners = () => {};
+    this._layer = null;
+    this._manager.category.value = undefined;
+    super.destroy();
   }
 }
 
