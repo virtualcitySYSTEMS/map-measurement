@@ -28,7 +28,10 @@ export default function addContextMenu(app, manager, owner) {
         !isCreate &&
         manager.currentSession.value?.type !== SessionType.SELECT
       ) {
-        manager.startSelectSession([targetFeature]);
+        setTimeout(() => {
+          // timeout prevents right click on opened editor window
+          manager.startSelectSession([event.feature]);
+        }, 0);
         editFeatures = [targetFeature];
       } else if (
         manager.currentSession.value?.type === SessionType.SELECT &&
@@ -36,7 +39,10 @@ export default function addContextMenu(app, manager, owner) {
           (feature) => feature.getId() === targetFeature.getId(),
         )
       ) {
-        manager.currentSession.value.setCurrentFeatures([targetFeature]);
+        setTimeout(() => {
+          // timeout prevents right click on opened editor window
+          manager.currentSession.value.setCurrentFeatures([event.feature]);
+        }, 0);
         editFeatures = [targetFeature];
       }
 
