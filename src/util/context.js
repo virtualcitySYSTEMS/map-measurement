@@ -22,10 +22,16 @@ export default function addContextMenu(app, manager, owner) {
     ) {
       const targetFeature = event.feature;
       let editFeatures = manager.currentFeatures.value;
-      if (manager.currentSession.value?.type !== SessionType.SELECT) {
+      const isCreate =
+        manager.currentSession.value?.type === SessionType.CREATE;
+      if (
+        !isCreate &&
+        manager.currentSession.value?.type !== SessionType.SELECT
+      ) {
         manager.startSelectSession([targetFeature]);
         editFeatures = [targetFeature];
       } else if (
+        manager.currentSession.value?.type === SessionType.SELECT &&
         !editFeatures.some(
           (feature) => feature.getId() === targetFeature.getId(),
         )
@@ -43,6 +49,7 @@ export default function addContextMenu(app, manager, owner) {
             id: 'measurement-edit',
             name: 'measurement.edit',
             icon: '$vcsEditVertices',
+            disabled: isCreate,
             callback() {
               manager.startEditSession();
             },
@@ -50,13 +57,19 @@ export default function addContextMenu(app, manager, owner) {
         }
       }
 
-      contextEntries.push(
-        createHideSelectedAction(manager, 'draw-context-hideSelected'),
+      const hideSelectionsAction = createHideSelectedAction(
+        manager,
+        'draw-context-hideSelected',
       );
+      const deleteAction = createDeleteSelectedAction(
+        manager,
+        null,
+        'draw-context-delete',
+      ).action;
+      hideSelectionsAction.disabled = isCreate;
+      deleteAction.disabled = isCreate;
 
-      contextEntries.push(
-        createDeleteSelectedAction(manager, null, 'draw-context-delete').action,
-      );
+      contextEntries.push(hideSelectionsAction, deleteAction);
     } else {
       manager.currentSession.value?.clearSelection?.();
     }
