@@ -218,7 +218,9 @@ export function createMeasurementManager(app) {
     sessionStoppedListener();
     sessionListener();
 
-    currentFeatures.value = [];
+    if (currentFeatures.value?.length !== 0) {
+      currentFeatures.value = [];
+    }
     currentSession.value?.stop?.();
 
     currentSession.value = newSession;
