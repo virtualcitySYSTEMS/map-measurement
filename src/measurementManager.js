@@ -330,7 +330,19 @@ export function createMeasurementManager(app) {
       );
       createSessionListener = createSession.creationFinished.addEventListener(
         (newFeature) => {
-          this.startSelectSession([newFeature]);
+          if (newFeature) {
+            let stopped = false;
+            const stopListener = createSession.stopped.addEventListener(() => {
+              stopListener();
+              stopped = true;
+            });
+
+            setTimeout(() => {
+              if (!stopped) {
+                this.startSelectSession([newFeature]);
+              }
+            }, 0);
+          }
         },
       );
       setCurrentSession(createSession);
