@@ -220,7 +220,7 @@
       <VcsFormButton
         @click="addToCategory"
         icon="$vcsComponentsPlus"
-        :disabled="isPersistent"
+        :disabled="isPersistent || isInCreation"
         :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
       />
       <VcsFormButton
@@ -284,7 +284,8 @@
       const manager = inject('manager');
       const values = ref(null);
       const targetFeature = shallowRef(null);
-      const isPersistent = shallowRef(true);
+      const isPersistent = shallowRef(false);
+      const isInCreation = shallowRef(false);
       const isMapSupported = shallowRef(false);
       const vm = getCurrentInstance().proxy;
       const editActions = ref([
@@ -358,6 +359,15 @@
       );
 
       watch(
+        manager.currentSession,
+        () => {
+          isInCreation.value =
+            manager.currentSession.value?.type === SessionType.CREATE;
+        },
+        { immediate: true },
+      );
+
+      watch(
         values.value,
         () => {
           const points = values.value.vertexPositions;
@@ -385,6 +395,7 @@
         headers,
         targetFeature,
         isPersistent,
+        isInCreation,
         isMapSupported,
         editActions,
         sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
