@@ -71,6 +71,14 @@ export function getValues(feature) {
   return feature[originalFeatureSymbol]?.[measurementModeSymbol]?.values;
 }
 
+export function isSupportedMeasurement(feature, map) {
+  const supportedMaps =
+    feature[measurementModeSymbol]?.supportedMaps ??
+    feature[originalFeatureSymbol]?.[measurementModeSymbol]?.supportedMaps ??
+    [];
+  return supportedMaps.includes(map.className);
+}
+
 class MeasurementMode {
   constructor(options) {
     this.app = options.app;

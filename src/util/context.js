@@ -5,6 +5,7 @@ import {
   createHideSelectedAction,
 } from './actionHelper.js';
 import {
+  isSupportedMeasurement,
   measurementModeSymbol,
   MeasurementType,
 } from '../mode/measurementMode.js';
@@ -57,7 +58,8 @@ export default function addContextMenu(app, manager, owner) {
             id: 'measurement-edit',
             name: 'measurement.edit',
             icon: '$vcsEditVertices',
-            disabled: isCreate,
+            disabled:
+              isCreate || !isSupportedMeasurement(editFeatures[0], event.map),
             callback() {
               manager.startEditSession();
             },
