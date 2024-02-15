@@ -125,7 +125,11 @@ export default function setupMeasurementResultWindow(
     const matchedSelection = collectionComponent.items.value.filter((i) =>
       currentFeatureIds.includes(i.name),
     );
-    if (currentFeatureIds.length === 1 && matchedSelection.length === 0) {
+    if (
+      currentFeatureIds.length === 1 &&
+      matchedSelection.length === 0 &&
+      manager.currentLayer.value.getFeatureById(currentFeatureIds[0])
+    ) {
       app.windowManager.add(
         {
           ...editor,

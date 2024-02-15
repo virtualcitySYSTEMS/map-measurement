@@ -1,4 +1,5 @@
 import {
+  CesiumMap,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
@@ -7,8 +8,10 @@ import {
 import { LineString, Point } from 'ol/geom.js';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
 import { Style } from 'ol/style.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
+import MeasurementMode, {
+  measurementModeSymbol,
+  MeasurementType,
+} from './measurementMode.js';
 
 const cartesianMap = [
   { key: 'height', indices: [0, 1] },
@@ -25,6 +28,11 @@ class Height3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.LineString;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className];
   }
 
   calcMeasurementResult(feature) {

@@ -1,10 +1,12 @@
 import { Feature } from 'ol';
 import {
+  CesiumMap,
   GeometryType,
   getDefaultProjection,
   getTextFromOptions,
+  ObliqueMap,
+  OpenlayersMap,
 } from '@vcmap/core';
-import { MeasurementType } from '../util/toolbox.js';
 
 /**
  * @typedef {Object} MeasurementValues
@@ -41,6 +43,26 @@ export const measurementModeSymbol = Symbol('measurementModeSymbol');
  */
 export const measurementTypeProperty = 'vcs_measurement_type';
 
+export const MeasurementType = {
+  Position3D: 'Position3D',
+  Distance2D: 'Distance2D',
+  Area2D: 'Area2D',
+  Distance3D: 'Distance3D',
+  Area3D: 'Area3D',
+  Height3D: 'Height3D',
+  ObliqueHeight2D: 'ObliqueHeight2D',
+};
+
+export const MeasurementGeometryType = {
+  [MeasurementType.Position3D]: GeometryType.Point,
+  [MeasurementType.Distance2D]: GeometryType.LineString,
+  [MeasurementType.Area2D]: GeometryType.Polygon,
+  [MeasurementType.Distance3D]: GeometryType.LineString,
+  [MeasurementType.Area3D]: GeometryType.Polygon,
+  [MeasurementType.Height3D]: GeometryType.LineString,
+  [MeasurementType.ObliqueHeight2D]: GeometryType.LineString,
+};
+
 class MeasurementMode {
   constructor(options) {
     this.app = options.app;
@@ -74,6 +96,11 @@ class MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.Polygon;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className];
   }
 
   /**

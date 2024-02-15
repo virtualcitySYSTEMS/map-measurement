@@ -10,12 +10,16 @@ import {
   transformFromImage,
   wgs84Projection,
   originalFeatureSymbol,
+  CesiumMap,
+  OpenlayersMap,
 } from '@vcmap/core';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
 import { LineString, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
+import MeasurementMode, {
+  measurementModeSymbol,
+  MeasurementType,
+} from './measurementMode.js';
 
 class Distance2D extends MeasurementMode {
   constructor(options) {
@@ -32,6 +36,11 @@ class Distance2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.LineString;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className];
   }
 
   calcMeasurementResult(feature) {

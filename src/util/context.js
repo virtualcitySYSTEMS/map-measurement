@@ -4,8 +4,10 @@ import {
   createDeleteSelectedAction,
   createHideSelectedAction,
 } from './actionHelper.js';
-import { measurementModeSymbol } from '../mode/measurementMode.js';
-import { MeasurementType } from './toolbox.js';
+import {
+  measurementModeSymbol,
+  MeasurementType,
+} from '../mode/measurementMode.js';
 
 /**
  * Adds edit actions to the context menu.

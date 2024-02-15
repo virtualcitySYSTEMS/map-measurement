@@ -1,4 +1,5 @@
 import {
+  CesiumMap,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
@@ -8,8 +9,10 @@ import {
 import { Polygon } from 'ol/geom.js';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
 import { Style } from 'ol/style.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
+import MeasurementMode, {
+  measurementModeSymbol,
+  MeasurementType,
+} from './measurementMode.js';
 
 /** @type {Cesium/Cartesian3} */
 let scratchAB = new Cartesian3();
@@ -25,6 +28,11 @@ class Area3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.Polygon;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className];
   }
 
   calcMeasurementResult(feature) {

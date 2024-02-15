@@ -1,7 +1,7 @@
 import { moduleIdSymbol } from '@vcmap/core';
 
 import { name, version, mapVersion } from '../package.json';
-import { addToolButtons, MeasurementType } from './util/toolbox.js';
+import { addToolButtons } from './util/toolbox.js';
 import { createMeasurementManager } from './measurementManager.js';
 import setupMeasurementResultWindow from './window/setup.js';
 import setupKeyListeners from './util/keyListeners.js';
@@ -10,6 +10,7 @@ import addContextMenu from './util/context.js';
 import SimpleMeasurementCategory, {
   createCategory,
 } from './category/simpleCategory.js';
+import { MeasurementType } from './mode/measurementMode.js';
 
 /**
  * @typedef {Object} PluginState

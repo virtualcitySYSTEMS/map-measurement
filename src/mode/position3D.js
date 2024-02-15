@@ -1,12 +1,13 @@
 import {
+  CesiumMap,
   GeometryType,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
+  OpenlayersMap,
   Projection,
 } from '@vcmap/core';
 import { Point } from 'ol/geom.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode from './measurementMode.js';
+import MeasurementMode, { MeasurementType } from './measurementMode.js';
 
 class Position3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
@@ -17,6 +18,11 @@ class Position3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.Point;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className, OpenlayersMap.className];
   }
 
   calcMeasurementResult(feature) {

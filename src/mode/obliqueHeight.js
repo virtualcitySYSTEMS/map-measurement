@@ -8,13 +8,16 @@ import {
   defaultVectorStyle,
   getDefaultHighlightStyle,
   originalFeatureSymbol,
+  ObliqueMap,
 } from '@vcmap/core';
 import { Cartesian3, Matrix3 } from '@vcmap-cesium/engine';
 import { transform } from 'ol/proj';
 import { LineString, Point } from 'ol/geom';
 import { Style } from 'ol/style.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
+import MeasurementMode, {
+  measurementModeSymbol,
+  MeasurementType,
+} from './measurementMode.js';
 
 class ObliqueHeight extends MeasurementMode {
   constructor(options) {
@@ -35,6 +38,11 @@ class ObliqueHeight extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.LineString;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [ObliqueMap.className];
   }
 
   calcMeasurementResult(feature) {

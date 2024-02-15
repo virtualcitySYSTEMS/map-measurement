@@ -223,7 +223,11 @@
         :disabled="isPersistent"
         :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
       />
-      <VcsFormButton @click="createNewMeasurement" variant="filled">
+      <VcsFormButton
+        @click="createNewMeasurement"
+        variant="filled"
+        :disabled="!isMapSupported"
+      >
         {{ $t('measurement.create.new') }}
       </VcsFormButton>
     </div>
@@ -249,8 +253,10 @@
     shallowRef,
   } from 'vue';
   import { SessionType } from '@vcmap/core';
-  import { MeasurementType } from '../util/toolbox.js';
-  import { measurementModeSymbol } from '../mode/measurementMode.js';
+  import {
+    measurementModeSymbol,
+    MeasurementType,
+  } from '../mode/measurementMode.js';
   import { name } from '../../package.json';
 
   export default {
@@ -278,7 +284,8 @@
       const manager = inject('manager');
       const values = ref(null);
       const targetFeature = shallowRef(null);
-      const isPersistent = shallowRef(false);
+      const isPersistent = shallowRef(true);
+      const isMapSupported = shallowRef(false);
       const vm = getCurrentInstance().proxy;
       const editActions = ref([
         {
@@ -290,6 +297,7 @@
               manager.currentEditSession.value?.type ===
               SessionType.EDIT_GEOMETRY,
           ),
+          disabled: computed(() => !isMapSupported.value),
           callback() {
             if (this.active) {
               manager.stopEditing();
@@ -333,6 +341,9 @@
             ) {
               editActions.value = [];
             }
+            isMapSupported.value = targetFeature.value?.[
+              measurementModeSymbol
+            ]?.supportedMaps.includes(app.maps.activeMap.className);
           }
         },
         { immediate: true },
@@ -374,6 +385,7 @@
         headers,
         targetFeature,
         isPersistent,
+        isMapSupported,
         editActions,
         sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
         createNewMeasurement() {
@@ -392,7 +404,16 @@
             name: 'copyAction',
             icon: 'mdi-content-copy',
             callback() {
-              navigator.clipboard.writeText(value);
+              if (!navigator.clipboard) {
+                const input = document.createElement('textarea');
+                input.innerHTML = value;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+              } else {
+                navigator.clipboard.writeText(value);
+              }
             },
           };
         },

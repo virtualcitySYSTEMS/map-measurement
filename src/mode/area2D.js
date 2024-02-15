@@ -1,8 +1,10 @@
 import {
+  CesiumMap,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
   getFlatCoordinatesFromGeometry,
+  OpenlayersMap,
   Projection,
 } from '@vcmap/core';
 import { Polygon } from 'ol/geom.js';
@@ -11,8 +13,10 @@ import {
   getArea as geodesicArea,
 } from 'ol/sphere.js';
 import { Style } from 'ol/style.js';
-import { MeasurementType } from '../util/toolbox.js';
-import MeasurementMode, { measurementModeSymbol } from './measurementMode.js';
+import MeasurementMode, {
+  measurementModeSymbol,
+  MeasurementType,
+} from './measurementMode.js';
 
 class Area2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
@@ -23,6 +27,11 @@ class Area2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.Polygon;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className, OpenlayersMap.className];
   }
 
   calcMeasurementResult(feature) {

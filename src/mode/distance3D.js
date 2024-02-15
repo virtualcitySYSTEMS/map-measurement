@@ -1,4 +1,5 @@
 import {
+  CesiumMap,
   GeometryType,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
@@ -6,8 +7,7 @@ import {
 } from '@vcmap/core';
 import { LineString } from 'ol/geom';
 import { Cartesian3 } from '@vcmap-cesium/engine';
-import MeasurementMode from './measurementMode.js';
-import { MeasurementType } from '../util/toolbox.js';
+import MeasurementMode, { MeasurementType } from './measurementMode.js';
 
 /**
  * @type {Cesium/Cartesian3}
@@ -28,6 +28,11 @@ class Distance3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   get geometryType() {
     return GeometryType.LineString;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  get supportedMaps() {
+    return [CesiumMap.className];
   }
 
   calcMeasurementResult(feature) {

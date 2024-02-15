@@ -3,8 +3,7 @@ import {
   getDefaultHighlightStyle,
   originalFeatureSymbol,
 } from '@vcmap/core';
-import { measurementModeSymbol } from './measurementMode.js';
-import { MeasurementType } from '../util/toolbox.js';
+import { measurementModeSymbol, MeasurementType } from './measurementMode.js';
 import Distance2D from './distance2D.js';
 import Area2D from './area2D.js';
 import Area3D from './area3D.js';

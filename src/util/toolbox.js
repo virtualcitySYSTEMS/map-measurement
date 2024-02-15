@@ -1,26 +1,12 @@
 import { watch } from 'vue';
-import {
-  CesiumMap,
-  createSync,
-  GeometryType,
-  ObliqueMap,
-  OpenlayersMap,
-  SessionType,
-} from '@vcmap/core';
+import { SessionType } from '@vcmap/core';
 import { ToolboxType } from '@vcmap/ui';
 import { name } from '../../package.json';
-/**
- * @enum {number}
- */
-export const MeasurementType = {
-  Position3D: 'Position3D',
-  Distance2D: 'Distance2D',
-  Area2D: 'Area2D',
-  Distance3D: 'Distance3D',
-  Area3D: 'Area3D',
-  Height3D: 'Height3D',
-  ObliqueHeight2D: 'ObliqueHeight2D',
-};
+import { createMeasurementMode } from '../measurementManager.js';
+import {
+  MeasurementGeometryType,
+  MeasurementType,
+} from '../mode/measurementMode.js';
 
 /**
  * @typedef {Object} MeasurementToolbox
@@ -36,16 +22,6 @@ export const MeasurementTypeIcon = {
   [MeasurementType.Area3D]: '$vcs3dArea',
   [MeasurementType.Height3D]: '$vcs3dHeight',
   [MeasurementType.ObliqueHeight2D]: '$vcs2dHeightOblique',
-};
-
-export const MeasurementGeometryType = {
-  [MeasurementType.Position3D]: GeometryType.Point,
-  [MeasurementType.Distance2D]: GeometryType.LineString,
-  [MeasurementType.Area2D]: GeometryType.Polygon,
-  [MeasurementType.Distance3D]: GeometryType.LineString,
-  [MeasurementType.Area3D]: GeometryType.Polygon,
-  [MeasurementType.Height3D]: GeometryType.LineString,
-  [MeasurementType.ObliqueHeight2D]: GeometryType.LineString,
 };
 
 /**
@@ -130,30 +106,15 @@ export function addToolButtons(manager, app) {
     createToolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
-    let filteredTools = [];
-    const { activeMap } = app.maps;
-    if (activeMap instanceof CesiumMap) {
-      filteredTools = createToolbox.action.tools.filter(
-        (tool) => tool.name !== MeasurementType.ObliqueHeight2D,
-      );
-    } else if (activeMap instanceof OpenlayersMap) {
-      filteredTools = createToolbox.action.tools.filter(
-        (tool) =>
-          tool.name !== MeasurementType.Distance3D &&
-          tool.name !== MeasurementType.Area3D &&
-          tool.name !== MeasurementType.Height3D &&
-          tool.name !== MeasurementType.ObliqueHeight2D,
-      );
-    } else if (activeMap instanceof ObliqueMap) {
-      filteredTools = createToolbox.action.tools.filter(
-        (tool) =>
-          tool.name !== MeasurementType.Distance3D &&
-          tool.name !== MeasurementType.Area3D &&
-          tool.name !== MeasurementType.Height3D &&
-          tool.name !== MeasurementType.Area2D &&
-          tool.name !== MeasurementType.Position3D,
-      );
-    }
+
+    const filteredTools = createToolbox.action.tools.filter((tool) => {
+      return createMeasurementMode(
+        tool.name,
+        app,
+        manager,
+      )?.supportedMaps.includes(app.maps.activeMap?.className);
+    });
+
     filteredTools.forEach((tool) => {
       tool.disabled = false;
     });
@@ -167,8 +128,13 @@ export function addToolButtons(manager, app) {
 
     if (manager.currentFeatures.value) {
       manager.currentLayer.value.removeFeaturesById(
-        manager.currentFeatures.value
-          .filter((f) => f[createSync])
+        manager.currentLayer.value
+          .getFeatures()
+          .filter(
+            (f) =>
+              !manager.category.value.collection.hasKey(f.getId()) &&
+              manager.currentSession.value?.type === SessionType.CREATE,
+          )
           .map((f) => f.getId()),
       );
     }

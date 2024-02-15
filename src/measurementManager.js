@@ -13,7 +13,6 @@ import {
 } from '@vcmap/core';
 import { unByKey } from 'ol/Observable.js';
 import Distance2D from './mode/distance2D.js';
-import { MeasurementType } from './util/toolbox.js';
 import Position3D from './mode/position3D.js';
 import Area2D from './mode/area2D.js';
 import Distance3D from './mode/distance3D.js';
@@ -21,6 +20,7 @@ import ObliqueHeight from './mode/obliqueHeight.js';
 import Area3D from './mode/area3D.js';
 import {
   measurementModeSymbol,
+  MeasurementType,
   measurementTypeProperty,
 } from './mode/measurementMode.js';
 import Height3D from './mode/height3D.js';
@@ -58,6 +58,26 @@ function createSimpleMeasurementLayer(app) {
   layer.activate();
   app.layers.add(layer);
   return layer;
+}
+
+export function createMeasurementMode(measurementType, app, manager) {
+  let measurementMode;
+  if (measurementType === MeasurementType.Position3D) {
+    measurementMode = new Position3D({ app, manager });
+  } else if (measurementType === MeasurementType.Distance2D) {
+    measurementMode = new Distance2D({ app, manager });
+  } else if (measurementType === MeasurementType.Distance3D) {
+    measurementMode = new Distance3D({ app, manager });
+  } else if (measurementType === MeasurementType.Area2D) {
+    measurementMode = new Area2D({ app, manager });
+  } else if (measurementType === MeasurementType.Area3D) {
+    measurementMode = new Area3D({ app, manager });
+  } else if (measurementType === MeasurementType.ObliqueHeight2D) {
+    measurementMode = new ObliqueHeight({ app, manager });
+  } else if (measurementType === MeasurementType.Height3D) {
+    measurementMode = new Height3D({ app, manager });
+  }
+  return measurementMode;
 }
 
 /**
@@ -278,26 +298,6 @@ export function createMeasurementManager(app) {
     }
   });
 
-  function createMeasurementMode(measurementType, manager) {
-    let measurementMode;
-    if (measurementType === MeasurementType.Position3D) {
-      measurementMode = new Position3D({ app, manager });
-    } else if (measurementType === MeasurementType.Distance2D) {
-      measurementMode = new Distance2D({ app, manager });
-    } else if (measurementType === MeasurementType.Distance3D) {
-      measurementMode = new Distance3D({ app, manager });
-    } else if (measurementType === MeasurementType.Area2D) {
-      measurementMode = new Area2D({ app, manager });
-    } else if (measurementType === MeasurementType.Area3D) {
-      measurementMode = new Area3D({ app, manager });
-    } else if (measurementType === MeasurementType.ObliqueHeight2D) {
-      measurementMode = new ObliqueHeight({ app, manager });
-    } else if (measurementType === MeasurementType.Height3D) {
-      measurementMode = new Height3D({ app, manager });
-    }
-    return measurementMode;
-  }
-
   return {
     category,
     currentSession,
@@ -309,6 +309,7 @@ export function createMeasurementManager(app) {
     startCreateSession(measurementType) {
       currentMeasurementMode.value = createMeasurementMode(
         measurementType,
+        app,
         this,
       );
 
@@ -366,7 +367,11 @@ export function createMeasurementManager(app) {
     addMeasurement(feature) {
       const measurementType = feature?.get(measurementTypeProperty);
       if (measurementType) {
-        const measurementMode = createMeasurementMode(measurementType);
+        const measurementMode = createMeasurementMode(
+          measurementType,
+          app,
+          this,
+        );
         addNewFeature(measurementMode, featureListeners, feature);
         if (category.value) {
           category.value.addToCollection(feature);
