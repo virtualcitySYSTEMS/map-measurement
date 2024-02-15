@@ -298,7 +298,7 @@
               manager.currentEditSession.value?.type ===
               SessionType.EDIT_GEOMETRY,
           ),
-          disabled: computed(() => !isMapSupported.value),
+          disabled: computed(() => !isMapSupported.value || isInCreation.value),
           callback() {
             if (this.active) {
               manager.stopEditing();

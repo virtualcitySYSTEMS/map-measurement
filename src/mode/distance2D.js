@@ -4,14 +4,14 @@ import {
   getDefaultHighlightStyle,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
-  obliqueGeometry,
   ObliqueMap,
   Projection,
   transformFromImage,
   wgs84Projection,
-  originalFeatureSymbol,
   CesiumMap,
   OpenlayersMap,
+  originalFeatureSymbol,
+  alreadyTransformedToImage,
 } from '@vcmap/core';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
 import { LineString, Point } from 'ol/geom.js';
@@ -57,14 +57,11 @@ class Distance2D extends MeasurementMode {
 
     return new Promise((resolve) => {
       const map = this.app.maps.activeMap;
-      const geometry =
-        map instanceof ObliqueMap
-          ? feature[obliqueGeometry]
-          : feature.getGeometry();
+      const geometry = feature.getGeometry();
 
       const coords = getFlatCoordinatesFromGeometry(geometry);
 
-      if (map instanceof ObliqueMap) {
+      if (geometry[alreadyTransformedToImage]) {
         this.calcMeasurementResolve = resolve;
         this.calcMeasurementTimeout = setTimeout(async () => {
           this.calcMeasurementResolve = undefined;
