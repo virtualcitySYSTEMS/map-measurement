@@ -220,7 +220,7 @@
       <VcsFormButton
         @click="addToCategory"
         icon="$vcsComponentsPlus"
-        :disabled="isPersistent || isInCreation"
+        :disabled="isPersistent || isInCreation || !isEditable"
         :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
       />
       <VcsFormButton
@@ -254,6 +254,7 @@
   } from 'vue';
   import { SessionType } from '@vcmap/core';
   import {
+    doNotEditAndPersistent,
     measurementModeSymbol,
     MeasurementType,
   } from '../mode/measurementMode.js';
@@ -286,6 +287,7 @@
       const targetFeature = shallowRef(null);
       const isPersistent = shallowRef(false);
       const isInCreation = shallowRef(false);
+      const isEditable = shallowRef(false);
       const isMapSupported = shallowRef(false);
       const vm = getCurrentInstance().proxy;
       const editActions = ref([
@@ -298,7 +300,10 @@
               manager.currentEditSession.value?.type ===
               SessionType.EDIT_GEOMETRY,
           ),
-          disabled: computed(() => !isMapSupported.value || isInCreation.value),
+          disabled: computed(
+            () =>
+              !isMapSupported.value || isInCreation.value || !isEditable.value,
+          ),
           callback() {
             if (this.active) {
               manager.stopEditing();
@@ -336,12 +341,7 @@
             isPersistent.value = manager.category.value.collection.hasKey(
               targetFeature.value?.getId(),
             );
-            if (
-              targetFeature.value?.[measurementModeSymbol]?.type ===
-              MeasurementType.ObliqueHeight2D
-            ) {
-              editActions.value = [];
-            }
+            isEditable.value = !targetFeature.value?.[doNotEditAndPersistent];
             isMapSupported.value = targetFeature.value?.[
               measurementModeSymbol
             ]?.supportedMaps.includes(app.maps.activeMap.className);
@@ -397,6 +397,7 @@
         isPersistent,
         isInCreation,
         isMapSupported,
+        isEditable,
         editActions,
         sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
         createNewMeasurement() {

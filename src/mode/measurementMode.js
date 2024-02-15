@@ -40,6 +40,11 @@ import {
 export const measurementModeSymbol = Symbol('measurementModeSymbol');
 
 /**
+ * @type {symbol}
+ */
+export const doNotEditAndPersistent = Symbol('doNotEditAndPersistentSymbol');
+
+/**
  * @type {string}
  */
 export const measurementTypeProperty = 'vcs_measurement_type';

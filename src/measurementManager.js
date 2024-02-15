@@ -10,6 +10,8 @@ import {
   markVolatile,
   maxZIndex,
   VectorStyleItem,
+  ObliqueMap,
+  doNotTransform,
 } from '@vcmap/core';
 import { unByKey } from 'ol/Observable.js';
 import Distance2D from './mode/distance2D.js';
@@ -19,6 +21,7 @@ import Distance3D from './mode/distance3D.js';
 import ObliqueHeight from './mode/obliqueHeight.js';
 import Area3D from './mode/area3D.js';
 import {
+  doNotEditAndPersistent,
   measurementModeSymbol,
   MeasurementType,
   measurementTypeProperty,
@@ -92,6 +95,10 @@ function addNewFeature(measurementMode, featureListeners, newFeature) {
   newFeature[measurementModeSymbol] = measurementMode;
   if (Object.keys(properties).length) {
     newFeature.setProperties(properties);
+  }
+  if (measurementMode.type === MeasurementType.ObliqueHeight2D) {
+    newFeature[doNotTransform] = true;
+    newFeature[doNotEditAndPersistent] = true;
   }
   featureListeners[newFeature.getId()] = newFeature
     .getGeometry()
@@ -209,6 +216,33 @@ export function createMeasurementManager(app) {
   let editSessionStoppedListener = () => {};
 
   const featureListeners = {};
+
+  let obliqueMapImageChangedListener;
+  function setupMapChangedListener() {
+    const deleteOblique2DHeightFeature = () =>
+      layer.removeFeaturesById(
+        layer
+          .getFeatures()
+          .filter(
+            (f) =>
+              f[measurementModeSymbol]?.type ===
+              MeasurementType.ObliqueHeight2D,
+          )
+          .map((f) => f.getId()),
+      );
+
+    return app.maps.mapActivated?.addEventListener(() => {
+      deleteOblique2DHeightFeature();
+      if (app.maps.activeMap instanceof ObliqueMap) {
+        obliqueMapImageChangedListener?.();
+        obliqueMapImageChangedListener =
+          app.maps.activeMap.imageChanged?.addEventListener(() => {
+            deleteOblique2DHeightFeature();
+          });
+      }
+    });
+  }
+  const mapChangedListener = setupMapChangedListener();
 
   /**
    * Stops running sessions and starts a new one.
@@ -413,6 +447,8 @@ export function createMeasurementManager(app) {
       unByKey(layerListener);
       app.layers.remove(layer);
       layer.destroy();
+      obliqueMapImageChangedListener?.();
+      mapChangedListener();
     },
   };
 }

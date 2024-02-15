@@ -5,9 +5,8 @@ import {
   createHideSelectedAction,
 } from './actionHelper.js';
 import {
+  doNotEditAndPersistent,
   isSupportedMeasurement,
-  measurementModeSymbol,
-  MeasurementType,
 } from '../mode/measurementMode.js';
 
 /**
@@ -50,10 +49,7 @@ export default function addContextMenu(app, manager, owner) {
       }
 
       if (editFeatures.length === 1) {
-        if (
-          editFeatures[0][measurementModeSymbol].type !==
-          MeasurementType.ObliqueHeight2D
-        ) {
+        if (!editFeatures[0][doNotEditAndPersistent]) {
           contextEntries.push({
             id: 'measurement-edit',
             name: 'measurement.edit',
