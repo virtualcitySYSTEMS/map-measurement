@@ -14,7 +14,7 @@ import {
 } from 'ol/sphere.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
-  measurementModeSymbol,
+  getValues,
   MeasurementType,
 } from './measurementMode.js';
 
@@ -76,7 +76,7 @@ class Area2D extends MeasurementMode {
       },
     });
     return (feature) => {
-      text.setText(feature[measurementModeSymbol].values.area);
+      text.setText(getValues(feature)?.area);
       return [defaultStyle, labelStyle];
     };
   }

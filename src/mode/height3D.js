@@ -9,7 +9,7 @@ import { LineString, Point } from 'ol/geom.js';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
-  measurementModeSymbol,
+  getValues,
   MeasurementType,
 } from './measurementMode.js';
 
@@ -180,11 +180,9 @@ class Height3D extends MeasurementMode {
     });
 
     return (feature) => {
-      heightStyleText.setText(feature[measurementModeSymbol].values.height);
-      horizontalStyleText.setText(
-        feature[measurementModeSymbol].values.horizontal,
-      );
-      distanceStyleText.setText(feature[measurementModeSymbol].values.distance);
+      heightStyleText.setText(getValues(feature)?.height);
+      horizontalStyleText.setText(getValues(feature)?.horizontal);
+      distanceStyleText.setText(getValues(feature)?.distance);
       return [triangleStyle, heightStyle, horizontalStyle, distanceStyle];
     };
   }

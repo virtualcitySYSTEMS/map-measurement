@@ -6,6 +6,7 @@ import {
   getTextFromOptions,
   ObliqueMap,
   OpenlayersMap,
+  originalFeatureSymbol,
 } from '@vcmap/core';
 
 /**
@@ -62,6 +63,13 @@ export const MeasurementGeometryType = {
   [MeasurementType.Height3D]: GeometryType.LineString,
   [MeasurementType.ObliqueHeight2D]: GeometryType.LineString,
 };
+
+export function getValues(feature) {
+  if (feature[measurementModeSymbol]) {
+    return feature[measurementModeSymbol].values;
+  }
+  return feature[originalFeatureSymbol]?.[measurementModeSymbol]?.values;
+}
 
 class MeasurementMode {
   constructor(options) {

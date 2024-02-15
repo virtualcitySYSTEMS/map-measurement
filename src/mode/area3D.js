@@ -10,7 +10,7 @@ import { Polygon } from 'ol/geom.js';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
-  measurementModeSymbol,
+  getValues,
   MeasurementType,
 } from './measurementMode.js';
 
@@ -115,13 +115,13 @@ class Area3D extends MeasurementMode {
       geometry: (f) => {
         const position = f.getGeometry().getInteriorPoint();
         const labelCoords = position.getCoordinates();
-        labelCoords[2] = f[measurementModeSymbol].values.height;
+        labelCoords[2] = getValues(f)?.height || 0;
         position.setCoordinates(labelCoords);
         return position;
       },
     });
     return (feature) => {
-      text.setText(feature[measurementModeSymbol].values.area);
+      text.setText(getValues(feature)?.area);
       return [defaultStyle, labelStyle];
     };
   }

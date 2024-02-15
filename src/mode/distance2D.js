@@ -10,14 +10,13 @@ import {
   wgs84Projection,
   CesiumMap,
   OpenlayersMap,
-  originalFeatureSymbol,
   alreadyTransformedToImage,
 } from '@vcmap/core';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
 import { LineString, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
-  measurementModeSymbol,
+  getValues,
   MeasurementType,
 } from './measurementMode.js';
 
@@ -159,10 +158,7 @@ class Distance2D extends MeasurementMode {
       },
     });
     return (feature) => {
-      const featureToUse = feature[originalFeatureSymbol]
-        ? feature[originalFeatureSymbol]
-        : feature;
-      text.setText(featureToUse[measurementModeSymbol]?.values.distance);
+      text.setText(getValues(feature)?.distance);
       return [defaultStyle, labelStyle];
     };
   }
