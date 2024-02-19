@@ -10,7 +10,10 @@
         item-key="id"
         :headers="headers"
         :show-searchbar="false"
-        v-if="values.type === MeasurementType.Position3D"
+        v-if="
+          values.type === MeasurementType.Position3D ||
+          values.type === MeasurementType.Position2D
+        "
       >
       </vcs-data-table>
       <!--distance measurement block-->
@@ -314,24 +317,36 @@
         },
       ]);
 
-      const headers = [
-        {
-          text: '',
-          value: 'name',
-        },
-        {
-          text: 'X',
-          value: 'x',
-        },
-        {
-          text: 'Y',
-          value: 'y',
-        },
-        {
-          text: 'Z',
-          value: 'z',
-        },
-      ];
+      const headers = computed(() => {
+        const usedHeaders = [
+          {
+            text: '',
+            value: 'name',
+          },
+          {
+            text: 'X',
+            value: 'x',
+          },
+          {
+            text: 'Y',
+            value: 'y',
+          },
+        ];
+
+        const { type } = values.value;
+        if (
+          type === MeasurementType.Position3D ||
+          type === MeasurementType.Area3D ||
+          type === MeasurementType.Distance3D
+        ) {
+          usedHeaders.push({
+            text: 'Z',
+            value: 'z',
+          });
+        }
+
+        return usedHeaders;
+      });
 
       watch(
         manager.currentFeatures,

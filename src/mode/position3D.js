@@ -3,7 +3,6 @@ import {
   GeometryType,
   getFlatCoordinatesFromGeometry,
   mercatorProjection,
-  OpenlayersMap,
   Projection,
 } from '@vcmap/core';
 import { Point } from 'ol/geom.js';
@@ -22,7 +21,7 @@ class Position3D extends MeasurementMode {
 
   // eslint-disable-next-line class-methods-use-this
   get supportedMaps() {
-    return [CesiumMap.className, OpenlayersMap.className];
+    return [CesiumMap.className];
   }
 
   calcMeasurementResult(feature) {

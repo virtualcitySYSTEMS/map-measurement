@@ -15,7 +15,8 @@ import {
  */
 
 export const MeasurementTypeIcon = {
-  [MeasurementType.Position3D]: '$vcsPointMeasurement',
+  [MeasurementType.Position3D]: '$vcs3dPoint',
+  [MeasurementType.Position2D]: '$vcs2dPoint',
   [MeasurementType.Distance2D]: '$vcs2dDistance',
   [MeasurementType.Area2D]: '$vcs2dArea',
   [MeasurementType.Distance3D]: '$vcs3dDistance',
@@ -54,6 +55,7 @@ function createCreateToolbox(manager) {
         manager.startCreateSession(this.tools[this.currentIndex].name);
       },
       tools: [
+        createCreateButton(MeasurementType.Position2D),
         createCreateButton(MeasurementType.Position3D),
         createCreateButton(MeasurementType.Distance2D),
         createCreateButton(MeasurementType.Distance3D),

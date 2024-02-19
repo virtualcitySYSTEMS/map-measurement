@@ -51,6 +51,7 @@ export const measurementTypeProperty = 'vcs_measurement_type';
 
 export const MeasurementType = {
   Position3D: 'Position3D',
+  Position2D: 'Position2D',
   Distance2D: 'Distance2D',
   Area2D: 'Area2D',
   Distance3D: 'Distance3D',
@@ -61,6 +62,7 @@ export const MeasurementType = {
 
 export const MeasurementGeometryType = {
   [MeasurementType.Position3D]: GeometryType.Point,
+  [MeasurementType.Position2D]: GeometryType.Point,
   [MeasurementType.Distance2D]: GeometryType.LineString,
   [MeasurementType.Area2D]: GeometryType.Polygon,
   [MeasurementType.Distance3D]: GeometryType.LineString,

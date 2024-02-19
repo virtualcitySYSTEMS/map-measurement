@@ -79,7 +79,8 @@ export default function measurementPlugin(config) {
           },
           create: {
             new: 'New',
-            [MeasurementType.Position3D]: 'Point',
+            [MeasurementType.Position2D]: '2D-Point',
+            [MeasurementType.Position3D]: '3D-Point',
             [MeasurementType.Distance2D]: '2D-Distance',
             [MeasurementType.Distance3D]: '3D-Distance',
             [MeasurementType.Area2D]: '2D-Area',
@@ -88,7 +89,8 @@ export default function measurementPlugin(config) {
             [MeasurementType.Height3D]: '3D-Height',
             tooltip: {
               addToWorkspace: 'Add to My Workspace',
-              [MeasurementType.Position3D]: 'Measure Point',
+              [MeasurementType.Position2D]: 'Measure 2D-Point',
+              [MeasurementType.Position3D]: 'Measure 3D-Point',
               [MeasurementType.Distance2D]: 'Measure 2D-Distance',
               [MeasurementType.Distance3D]: 'Measure 3D-Distance',
               [MeasurementType.Area2D]: 'Measure 2D-Area',
@@ -138,7 +140,8 @@ export default function measurementPlugin(config) {
           },
           create: {
             new: 'Neu',
-            [MeasurementType.Position3D]: 'Punkt',
+            [MeasurementType.Position2D]: '2D-Punkt',
+            [MeasurementType.Position3D]: '3D-Punkt',
             [MeasurementType.Distance2D]: '2D-Distanz',
             [MeasurementType.Distance3D]: '3D-Distanz',
             [MeasurementType.Area2D]: '2D-Fläche',
@@ -147,7 +150,8 @@ export default function measurementPlugin(config) {
             [MeasurementType.Height3D]: '3D-Höhe',
             tooltip: {
               addToWorkspace: 'In Mein Arbeitsbereich hinzufügen',
-              [MeasurementType.Position3D]: 'Punkt messen',
+              [MeasurementType.Position2D]: '2D-Punkt messen',
+              [MeasurementType.Position3D]: '3D-Punkt messen',
               [MeasurementType.Distance2D]: '2D-Distanz messen',
               [MeasurementType.Distance3D]: '3D-Distanz messen',
               [MeasurementType.Area2D]: '2D-Fläche messen',

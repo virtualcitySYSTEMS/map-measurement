@@ -28,6 +28,7 @@ import {
 } from './mode/measurementMode.js';
 import Height3D from './mode/height3D.js';
 import getMeasurementStyleFunction from './mode/styleHelper.js';
+import Position2D from './mode/position2D.js';
 
 /**
  * @typedef {Object} MeasurementManager
@@ -67,6 +68,8 @@ export function createMeasurementMode(measurementType, app, manager) {
   let measurementMode;
   if (measurementType === MeasurementType.Position3D) {
     measurementMode = new Position3D({ app, manager });
+  } else if (measurementType === MeasurementType.Position2D) {
+    measurementMode = new Position2D({ app, manager });
   } else if (measurementType === MeasurementType.Distance2D) {
     measurementMode = new Distance2D({ app, manager });
   } else if (measurementType === MeasurementType.Distance3D) {
