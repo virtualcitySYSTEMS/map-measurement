@@ -128,8 +128,12 @@ export default function measurementPlugin(config) {
             import: 'Import',
           },
           hint: {
-            oblique:
-              'Please notice that measurements only provide correct results if measured on the ground',
+            oblique: {
+              distance:
+                'Please notice that measurements only provide correct results if measured on the ground.',
+              height:
+                'Please notice that measurements only provide correct results if the start point is on the ground.',
+            },
           },
         },
       },
@@ -189,8 +193,12 @@ export default function measurementPlugin(config) {
             import: 'Importieren',
           },
           hint: {
-            oblique:
-              'Bitte beachten Sie, dass Messungen nur dann korrekte Ergebnisse liefern, wenn sie auf dem Boden gemessen werden.',
+            oblique: {
+              distance:
+                'Bitte beachten Sie, dass Messungen nur dann korrekte Ergebnisse liefern, wenn sie auf dem Boden gemessen werden.',
+              height:
+                'Bitte beachten Sie, dass Messungen nur korrekte Ergebnisse liefern, wenn der Startpunkt der Messung auf einen Bodenpunkt gesetzt wird.',
+            },
           },
         },
       },

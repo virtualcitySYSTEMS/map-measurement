@@ -92,9 +92,20 @@
         </v-row>
       </div>
       <!--oblique measurement hint-->
-      <div v-if="values.type === MeasurementType.ObliqueHeight2D">
-        <v-row no-gutters class="py-2 px-2">
-          {{ $t('measurement.hint.oblique') }}
+      <div v-if="activeMapClassName === 'ObliqueMap'">
+        <v-row
+          no-gutters
+          class="py-2 px-2"
+          v-if="values.type === MeasurementType.Distance2D"
+        >
+          {{ $t('measurement.hint.oblique.distance') }}
+        </v-row>
+        <v-row
+          no-gutters
+          class="py-2 px-2"
+          v-if="values.type === MeasurementType.ObliqueHeight2D"
+        >
+          {{ $t('measurement.hint.oblique.height') }}
         </v-row>
       </div>
       <!--3D height measurement block-->
@@ -284,6 +295,7 @@
     setup(props, { attrs }) {
       const windowId = attrs['window-state'].id;
       const app = inject('app');
+      const activeMapClassName = app.maps.activeMap.className;
       /** @type {import("../measurementManager.js").MeasurementManager} */
       const manager = inject('manager');
       const values = ref(null);
@@ -406,6 +418,7 @@
       });
 
       return {
+        activeMapClassName,
         values,
         headers,
         targetFeature,
