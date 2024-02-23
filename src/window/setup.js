@@ -3,6 +3,7 @@ import { SessionType } from '@vcmap/core';
 import {
   createListExportAction,
   createListImportAction,
+  importIntoLayer,
   makeEditorCollectionComponentClass,
   WindowSlot,
 } from '@vcmap/ui';
@@ -10,10 +11,7 @@ import { unByKey } from 'ol/Observable.js';
 import { name } from '../../package.json';
 import measurementWindow from './measurementWindow.vue';
 import { MeasurementTypeIcon } from '../util/toolbox.js';
-import {
-  createExportCallback,
-  createImportCallback,
-} from '../util/actionHelper.js';
+import { createExportCallback } from '../util/actionHelper.js';
 
 /**
  * @param {MeasurementManager} manager
@@ -64,7 +62,16 @@ export default function setupMeasurementResultWindow(
 
   const { action: importAction, destroy: destroyImportAction } =
     createListImportAction(
-      (files) => createImportCallback(app, manager, files),
+      async (files) => {
+        const layerListener = manager.currentLayer.value
+          .getSource()
+          .on('addfeature', ({ feature }) => {
+            manager.addMeasurement(feature);
+          });
+        await importIntoLayer(files, app, manager.currentLayer.value);
+        unByKey(layerListener);
+        return true;
+      },
       app.windowManager,
       name,
       'category-manager',

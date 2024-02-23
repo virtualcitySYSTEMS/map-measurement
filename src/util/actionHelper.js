@@ -1,6 +1,6 @@
-import { parseGeoJSON, writeGeoJSON } from '@vcmap/core';
+import { writeGeoJSON } from '@vcmap/core';
 import { watch } from 'vue';
-import { downloadText, NotificationType } from '@vcmap/ui';
+import { downloadText } from '@vcmap/ui';
 
 /**
  *
@@ -74,37 +74,6 @@ export function createDeleteSelectedAction(
     action: removeAction,
     destroy: destroyWatcher,
   };
-}
-
-/**
- * @param {import("@vcmap/ui").VcsUiApp} app The VcsUiApp
- * @param {import('../editorManager.js').EditorManager} manager The editor manager
- * @param {files: File[]} files The input files
- */
-export function createImportCallback(app, manager, files) {
-  files.forEach((file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      try {
-        const { features, style, vcsMeta } = parseGeoJSON(text, {
-          dynamicStyle: true,
-        });
-        features.forEach((f) => manager.addMeasurement(f));
-        manager.currentLayer.value.addFeatures(features);
-        if (style) {
-          manager.currentLayer.value.setStyle(style);
-        }
-        manager.currentLayer.value.setVcsMeta(vcsMeta);
-      } catch (err) {
-        app.notifier.add({
-          message: err.message,
-          type: NotificationType.ERROR,
-        });
-      }
-    };
-    reader.readAsText(file);
-  });
 }
 
 function exportFeatures(features, layer, writeOptions) {
