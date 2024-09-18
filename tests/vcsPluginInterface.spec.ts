@@ -126,7 +126,6 @@ describe('VcsPlugin Interface test', () => {
     });
 
     it('should override the plugin correctly', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       expect(() => app.plugins.override(pluginInstance2!)).to.not.throw;
       app.plugins.override(pluginInstance2!);
       expect(app.plugins.getByKey(packageJSON.name)).to.have.property(

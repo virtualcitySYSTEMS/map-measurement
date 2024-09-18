@@ -360,6 +360,15 @@
         return usedHeaders;
       });
 
+      const sketchIcon = computed(() => {
+        const theme = app.vuetify.theme.current.value.dark ? 'dark' : 'light';
+        return getPluginAssetUrl(
+          app,
+          name,
+          `plugin-assets/sketch_${theme}.png`,
+        );
+      });
+
       watch(
         manager.currentFeatures,
         () => {
@@ -421,7 +430,7 @@
         isMapSupported,
         isEditable,
         editActions,
-        sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
+        sketchIcon,
         createNewMeasurement(): void {
           manager.startCreateSession(values.value.type);
           app.windowManager.remove(windowId);
