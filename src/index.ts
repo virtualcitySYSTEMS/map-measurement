@@ -1,3 +1,4 @@
+import { VcsUiApp, VcsPlugin, WindowPosition } from '@vcmap/ui';
 import { moduleIdSymbol } from '@vcmap/core';
 
 import { name, version, mapVersion } from '../package.json';
@@ -6,70 +7,72 @@ import { createMeasurementManager } from './measurementManager.js';
 import setupMeasurementResultWindow from './window/setup.js';
 import setupKeyListeners from './util/keyListeners.js';
 import addContextMenu from './util/context.js';
-
 import SimpleMeasurementCategory, {
   createCategory,
 } from './category/simpleCategory.js';
 import { MeasurementType } from './mode/measurementMode.js';
 
-/**
- * @typedef {Object} PluginState
- * @property {import("@vcmap/ui").WindowPositionOptions} [windowPosition]
- * @property {boolean} active
- */
+type PluginState = {
+  active: boolean;
+  windowPosition: WindowPosition;
+};
+type PluginConfig = Record<never, never>;
+type MeasurementPlugin = VcsPlugin<PluginConfig, PluginState> & {
+  readonly config: PluginConfig;
+};
 
-/**
- * @param {PluginConfig} config - the configuration of this plugin instance, passed in from the app.
- * @returns {import("@vcmap/ui/src/vcsUiApp").VcsPlugin<PluginConfig, PluginState>}
- */
-export default function measurementPlugin(config) {
-  // eslint-disable-next-line no-console
+export default function measurementPlugin(
+  config: PluginConfig,
+): MeasurementPlugin {
+  let destroy = (): void => {};
   return {
-    get name() {
+    get name(): string {
       return name;
     },
-    get version() {
+    get version(): string {
       return version;
     },
-    get mapVersion() {
+    get mapVersion(): string {
       return mapVersion;
     },
-    get config() {
+    get config(): PluginConfig {
       return config;
     },
-    _destroy: () => {},
-    /**
-     * @param {import("@vcmap/ui").VcsUiApp} vcsUiApp
-     */
-    async initialize(vcsUiApp) {
-      this._measurementManager = createMeasurementManager(vcsUiApp);
+    async initialize(app: VcsUiApp): Promise<void> {
+      const measurementManager = createMeasurementManager(app);
 
-      vcsUiApp.categoryClassRegistry.registerClass(
+      app.categoryClassRegistry.registerClass(
         this[moduleIdSymbol],
         SimpleMeasurementCategory.className,
         SimpleMeasurementCategory,
       );
 
       const { categoryUiItem: collectionComponent, destroy: destroyCategory } =
-        await createCategory(this._measurementManager, vcsUiApp);
+        await createCategory(measurementManager, app);
 
-      const destroyButtons = addToolButtons(this._measurementManager, vcsUiApp);
-      const { destroy: destroyMeasurementWindow } =
-        setupMeasurementResultWindow(
-          this._measurementManager,
-          vcsUiApp,
-          collectionComponent,
-        );
+      const mapActivatedListener = app.maps.mapActivated.addEventListener(
+        () => {
+          const destroyButtons = addToolButtons(measurementManager, app);
+          const { destroy: destroyMeasurementWindow } =
+            setupMeasurementResultWindow(
+              measurementManager,
+              app,
+              collectionComponent,
+            );
 
-      const destroyKeyListeners = setupKeyListeners(this._measurementManager);
+          const destroyKeyListeners = setupKeyListeners(measurementManager);
 
-      addContextMenu(vcsUiApp, this._measurementManager, this.name);
-      this._destroy = () => {
-        destroyButtons();
-        destroyMeasurementWindow();
-        destroyCategory();
-        destroyKeyListeners();
-      };
+          addContextMenu(app, measurementManager, this.name);
+          destroy = (): void => {
+            destroyButtons();
+            destroyMeasurementWindow();
+            destroyCategory();
+            destroyKeyListeners();
+            measurementManager.destroy();
+          };
+          mapActivatedListener();
+        },
+      );
     },
     i18n: {
       en: {
@@ -203,11 +206,8 @@ export default function measurementPlugin(config) {
         },
       },
     },
-    destroy() {
-      if (this._measurementManager) {
-        this._measurementManager.destroy();
-        this._destroy();
-      }
+    destroy(): void {
+      destroy();
     },
   };
 }

@@ -2,7 +2,7 @@ import {
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
-  getFlatCoordinatesFromGeometry,
+  getFlatCoordinateReferences,
   mercatorProjection,
   ObliqueMap,
   Projection,
@@ -12,41 +12,56 @@ import {
   OpenlayersMap,
   alreadyTransformedToImage,
 } from '@vcmap/core';
+import { VcsUiApp } from '@vcmap/ui';
+import Feature from 'ol/Feature.js';
+import { Coordinate } from 'ol/coordinate.js';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
-import { LineString, Point } from 'ol/geom.js';
+import { LineString, Geometry, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
+import { MeasurementManager } from '../measurementManager.js';
 import MeasurementMode, {
   getValues,
   MeasurementType,
 } from './measurementMode.js';
 
+type Distance2DOptions = {
+  app: VcsUiApp;
+  manager: MeasurementManager;
+};
+
 class Distance2D extends MeasurementMode {
-  constructor(options) {
+  calcMeasurementResolve:
+    | ((value: boolean | PromiseLike<boolean>) => void)
+    | undefined;
+
+  calcMeasurementTimeout: NodeJS.Timeout | undefined;
+
+  constructor(options: Distance2DOptions) {
     super(options);
     this.calcMeasurementResolve = undefined;
     this.calcMeasurementTimeout = undefined;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Distance2D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.LineString;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (this.calcMeasurementTimeout) {
       clearTimeout(this.calcMeasurementTimeout);
       this.calcMeasurementTimeout = undefined;
-      this.calcMeasurementResolve(false);
+      this.calcMeasurementResolve?.(false);
       this.calcMeasurementResolve = undefined;
     }
 
@@ -55,19 +70,19 @@ class Distance2D extends MeasurementMode {
     }
 
     return new Promise((resolve) => {
-      const map = this.app.maps.activeMap;
-      const geometry = feature.getGeometry();
-
-      const coords = getFlatCoordinatesFromGeometry(geometry);
+      const map = this.app.maps.activeMap!;
+      const geometry = feature.getGeometry()!;
+      const coords = getFlatCoordinateReferences(geometry);
 
       if (geometry[alreadyTransformedToImage]) {
         this.calcMeasurementResolve = resolve;
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         this.calcMeasurementTimeout = setTimeout(async () => {
           this.calcMeasurementResolve = undefined;
           this.calcMeasurementTimeout = undefined;
           const wgs84Coords = await Promise.all(
             coords.map((c) => {
-              return transformFromImage(map.currentImage, c, {
+              return transformFromImage((map as ObliqueMap).currentImage!, c, {
                 dataProjection: wgs84Projection,
               }).then((res) => {
                 return res.coords;
@@ -83,15 +98,15 @@ class Distance2D extends MeasurementMode {
               wgs84Coords[i],
             );
             positions.push({
-              id: positions.length + 1,
+              id: (positions.length + 1).toString(),
               name: undefined,
-              x: coordinate[0].toFixed(this.decimalPlaces),
-              y: coordinate[1].toFixed(this.decimalPlaces),
+              x: +coordinate[0].toFixed(this.decimalPlaces),
+              y: +coordinate[1].toFixed(this.decimalPlaces),
               z: 0,
             });
           }
-          this.values.vertexPositions = positions;
-          this.values.distance = this.getValue(
+          this.values.value.vertexPositions = positions;
+          this.values.value.distance = this.getValue(
             this.calculateDistance(wgs84Coords),
           );
           resolve(true);
@@ -105,56 +120,61 @@ class Distance2D extends MeasurementMode {
             coords[i],
           );
           positions.push({
-            id: positions.length + 1,
+            id: (positions.length + 1).toString(),
             name: undefined,
-            x: coordinate[0].toFixed(this.decimalPlaces),
-            y: coordinate[1].toFixed(this.decimalPlaces),
+            x: +coordinate[0].toFixed(this.decimalPlaces),
+            y: +coordinate[1].toFixed(this.decimalPlaces),
             z: 0,
           });
         }
         for (let i = 0; i < coords.length; i++) {
           Projection.mercatorToWgs84(coords[i], true);
         }
-        this.values.vertexPositions = positions;
-        this.values.distance = this.getValue(this.calculateDistance(coords));
+
+        this.values.value = {
+          type: this.type,
+          distance: this.getValue(this.calculateDistance(coords)),
+          vertexPositions: positions,
+        };
         resolve(true);
       }
     });
   }
 
-  calculateDistance(coordinates) {
+  // eslint-disable-next-line class-methods-use-this
+  calculateDistance(coordinates: Coordinate[]): number {
     const coordsLength = coordinates.length;
-    this.segmentDistance = new Array(coordsLength - 1);
+    const segmentDistance = new Array(coordsLength - 1);
     let distance = 0;
     for (let i = 1; i < coordsLength; i++) {
-      this.segmentDistance[i - 1] = haversineDistance(
+      segmentDistance[i - 1] = haversineDistance(
         coordinates[i - 1],
         coordinates[i],
       );
-      distance += this.segmentDistance[i - 1];
+      distance += segmentDistance[i - 1];
     }
     return distance;
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     return templateFeature;
   }
 
-  static getStyleFunction(highlight) {
+  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
-      : defaultVectorStyle.style;
+      : (defaultVectorStyle.style as Style);
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      geometry: (f): Geometry => {
+        const coords = (f.getGeometry() as Geometry).getCoordinates();
         if (coords.length > 1) {
           return new Point(coords[coords.length - 1]);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
     return (feature) => {

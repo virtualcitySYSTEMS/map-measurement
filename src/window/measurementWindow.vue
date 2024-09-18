@@ -1,11 +1,11 @@
 <template>
-  <v-sheet>
+  <v-sheet v-if="values">
     <VcsFormSection
       :heading="`measurement.create.${values.type}`"
       :header-actions="editActions"
     >
       <!--point measurement block-->
-      <vcs-data-table
+      <VcsDataTable
         :items="values.vertexPositions"
         item-key="id"
         :headers="headers"
@@ -15,7 +15,7 @@
           values.type === MeasurementType.Position2D
         "
       >
-      </vcs-data-table>
+      </VcsDataTable>
       <!--distance measurement block-->
       <div
         v-if="
@@ -33,7 +33,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.distance)]"
+              :actions="[getCopyAction(values.distance!)]"
             />
           </v-col>
         </v-row>
@@ -55,7 +55,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.area)]"
+              :actions="[getCopyAction(values.area!)]"
             />
           </v-col>
         </v-row>
@@ -69,7 +69,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.circumference)]"
+              :actions="[getCopyAction(values.circumference!)]"
             />
           </v-col>
         </v-row>
@@ -86,7 +86,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.height)]"
+              :actions="[getCopyAction(values.height!)]"
             />
           </v-col>
         </v-row>
@@ -120,7 +120,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.height)]"
+              :actions="[getCopyAction(values.height!)]"
             />
           </v-col>
         </v-row>
@@ -136,7 +136,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.horizontal)]"
+              :actions="[getCopyAction(values.horizontal!)]"
             />
           </v-col>
         </v-row>
@@ -150,7 +150,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.distance)]"
+              :actions="[getCopyAction(values.distance!)]"
             />
           </v-col>
         </v-row>
@@ -164,7 +164,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.alpha)]"
+              :actions="[getCopyAction(values.alpha!)]"
             />
           </v-col>
         </v-row>
@@ -178,11 +178,11 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.beta)]"
+              :actions="[getCopyAction(values.beta!)]"
             />
           </v-col>
         </v-row>
-        <VcsFormSection :expandable="true" heading="Sketch">
+        <VcsFormSection :expandable="true" heading="Sketch" v-if="sketchIcon">
           <v-img :src="sketchIcon" alt="plugin-icon" />
         </VcsFormSection>
         <v-row no-gutters class="py-0 px-1">
@@ -195,7 +195,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.heightAltitude)]"
+              :actions="[getCopyAction(values.heightAltitude!)]"
             />
           </v-col>
         </v-row>
@@ -209,7 +209,7 @@
             </VcsLabel>
             <VcsActionButtonList
               class="px-1"
-              :actions="[getCopyAction(values.groundAltitude)]"
+              :actions="[getCopyAction(values.groundAltitude!)]"
             />
           </v-col>
         </v-row>
@@ -222,13 +222,13 @@
         values.type === MeasurementType.Distance3D
       "
     >
-      <vcs-data-table
+      <VcsDataTable
         :items="values.vertexPositions"
         item-key="id"
         :headers="headers"
         :show-searchbar="false"
       >
-      </vcs-data-table>
+      </VcsDataTable>
     </VcsFormSection>
     <div class="d-flex w-full justify-space-between px-2 pt-2 pb-1">
       <VcsFormButton
@@ -247,7 +247,8 @@
     </div>
   </v-sheet>
 </template>
-<script>
+
+<script lang="ts">
   import {
     VcsDataTable,
     VcsFormSection,
@@ -255,32 +256,34 @@
     VcsActionButtonList,
     VcsFormButton,
     getPluginAssetUrl,
+    VcsUiApp,
+    VcsAction,
+    WindowState,
   } from '@vcmap/ui';
-  import { VRow, VCol, VSheet, VImg } from 'vuetify/lib';
+  import { VRow, VCol, VSheet, VImg } from 'vuetify/components';
   import {
     inject,
     ref,
     watch,
-    getCurrentInstance,
     computed,
     onUnmounted,
     shallowRef,
+    defineComponent,
+    Ref,
+    ShallowRef,
   } from 'vue';
-  import { SessionType } from '@vcmap/core';
-  import {
+  import { SelectFeaturesSession, SessionType } from '@vcmap/core';
+  import Feature from 'ol/Feature.js';
+  import { MeasurementManager } from '../measurementManager.js';
+  import MeasurementMode, {
     doNotEditAndPersistent,
     measurementModeSymbol,
     MeasurementType,
   } from '../mode/measurementMode.js';
   import { name } from '../../package.json';
 
-  export default {
+  export default defineComponent({
     name: 'MeasurementWindow',
-    computed: {
-      MeasurementType() {
-        return MeasurementType;
-      },
-    },
     components: {
       VcsDataTable,
       VcsFormSection,
@@ -292,57 +295,57 @@
       VSheet,
       VImg,
     },
-    setup(props, { attrs }) {
-      const windowId = attrs['window-state'].id;
-      const app = inject('app');
-      const activeMapClassName = app.maps.activeMap.className;
-      /** @type {import("../measurementManager.js").MeasurementManager} */
-      const manager = inject('manager');
-      const values = ref(null);
-      const targetFeature = shallowRef(null);
+    setup(_, { attrs }) {
+      const windowId = (attrs['window-state'] as WindowState).id;
+      const app = inject('app') as VcsUiApp;
+      const activeMapClassName = app.maps.activeMap?.className;
+      const manager = inject('manager') as MeasurementManager;
+      const { values } = manager.currentMeasurementMode.value!;
+      const targetFeature: ShallowRef<Feature | undefined> = shallowRef();
       const isPersistent = shallowRef(false);
       const isInCreation = shallowRef(false);
       const isEditable = shallowRef(false);
       const isMapSupported = shallowRef(false);
-      const vm = getCurrentInstance().proxy;
-      const editActions = ref([
+
+      const editActions: Ref<VcsAction[]> = ref([
         {
           name: 'editAction',
           icon: '$vcsEditVertices',
           title: 'measurement.edit',
-          active: computed(
-            () =>
-              manager.currentEditSession.value?.type ===
-              SessionType.EDIT_GEOMETRY,
-          ),
-          disabled: computed(
-            () =>
-              !isMapSupported.value || isInCreation.value || !isEditable.value,
-          ),
-          callback() {
+          active:
+            manager.currentEditSession.value?.type ===
+            SessionType.EDIT_GEOMETRY,
+          disabled:
+            !isMapSupported.value || isInCreation.value || !isEditable.value,
+          callback(): void {
             if (this.active) {
               manager.stopEditing();
             } else {
-              manager.startEditSession(targetFeature.value);
+              manager.startEditSession(targetFeature.value!);
             }
           },
         },
       ]);
 
+      watch(
+        () => manager.currentEditSession.value?.type,
+        () => {
+          editActions.value[0].active =
+            manager.currentEditSession.value?.type ===
+            SessionType.EDIT_GEOMETRY;
+        },
+      );
+
+      watch([isMapSupported, isInCreation, isEditable], () => {
+        editActions.value[0].disabled =
+          !isMapSupported.value || isInCreation.value || !isEditable.value;
+      });
+
       const headers = computed(() => {
         const usedHeaders = [
-          {
-            text: '',
-            value: 'name',
-          },
-          {
-            text: 'X',
-            value: 'x',
-          },
-          {
-            text: 'Y',
-            value: 'y',
-          },
+          { title: '', value: 'name' },
+          { title: 'X', value: 'x' },
+          { title: 'Y', value: 'y' },
         ];
 
         const { type } = values.value;
@@ -351,10 +354,7 @@
           type === MeasurementType.Area3D ||
           type === MeasurementType.Distance3D
         ) {
-          usedHeaders.push({
-            text: 'Z',
-            value: 'z',
-          });
+          usedHeaders.push({ title: 'Z', value: 'z' });
         }
 
         return usedHeaders;
@@ -365,22 +365,15 @@
         () => {
           if (manager.currentFeatures.value.length > 0) {
             targetFeature.value = manager.currentFeatures.value[0];
-            isPersistent.value = manager.category.value.collection.hasKey(
+            isPersistent.value = !!manager.category?.collection.hasKey(
               targetFeature.value?.getId(),
             );
             isEditable.value = !targetFeature.value?.[doNotEditAndPersistent];
-            isMapSupported.value = targetFeature.value?.[
-              measurementModeSymbol
-            ]?.supportedMaps.includes(app.maps.activeMap.className);
+            isMapSupported.value = // prettier-ignore
+              (
+                targetFeature.value?.[measurementModeSymbol] as MeasurementMode
+              )?.supportedMaps.includes(app.maps.activeMap!.className);
           }
-        },
-        { immediate: true },
-      );
-
-      watch(
-        manager.currentValues,
-        () => {
-          values.value = manager.currentValues.value;
         },
         { immediate: true },
       );
@@ -395,15 +388,13 @@
       );
 
       watch(
-        values.value,
+        values,
         () => {
           const points = values.value.vertexPositions;
           if (points) {
             points.forEach((p) => {
               if (!p.name) {
-                p.name = computed(() => {
-                  return `${vm.$t('measurement.value.point')} ${p.id}`;
-                });
+                p.name = `${app.vueI18n.t('measurement.value.point')} ${p.id}`;
               }
             });
           }
@@ -413,11 +404,14 @@
 
       onUnmounted(() => {
         if (!isPersistent.value) {
-          manager.currentSession.value?.clearSelection?.();
+          (
+            manager.currentSession.value as SelectFeaturesSession
+          )?.clearSelection?.();
         }
       });
 
       return {
+        MeasurementType,
         activeMapClassName,
         values,
         headers,
@@ -428,22 +422,22 @@
         isEditable,
         editActions,
         sketchIcon: getPluginAssetUrl(app, name, 'plugin-assets/sketch.png'),
-        createNewMeasurement() {
+        createNewMeasurement(): void {
           manager.startCreateSession(values.value.type);
           app.windowManager.remove(windowId);
         },
-        addToCategory() {
+        addToCategory(): void {
           if (targetFeature.value) {
-            manager.category.value.addToCollection(targetFeature.value);
+            manager.category!.addToCollection(targetFeature.value);
             manager.currentFeatures.value = [targetFeature.value];
             isPersistent.value = true;
           }
         },
-        getCopyAction(value) {
+        getCopyAction(value: string): VcsAction {
           return {
             name: 'copyAction',
             icon: 'mdi-content-copy',
-            callback() {
+            callback(): void {
               if (!navigator.clipboard) {
                 const input = document.createElement('textarea');
                 input.innerHTML = value;
@@ -452,18 +446,19 @@
                 document.execCommand('copy');
                 document.body.removeChild(input);
               } else {
-                navigator.clipboard.writeText(value);
+                navigator.clipboard.writeText(value).catch(() => {});
               }
             },
           };
         },
         required: [
-          (v) => !!v || 'Input may not be null',
-          (v) => v.length > 0 || 'Input must have a length',
+          (v: never): true | string => !!v || 'Input may not be null',
+          (v: never[]): true | string =>
+            v.length > 0 || 'Input must have a length',
         ],
       };
     },
-  };
+  });
 </script>
 
 <style lang="scss" scoped>

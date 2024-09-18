@@ -1,5 +1,7 @@
-import { SessionType, vcsLayerName } from '@vcmap/core';
-
+import { SelectFeaturesSession, SessionType, vcsLayerName } from '@vcmap/core';
+import { VcsUiApp } from '@vcmap/ui';
+import Feature from 'ol/Feature.js';
+import { MeasurementManager } from '../measurementManager.js';
 import {
   createDeleteSelectedAction,
   createHideSelectedAction,
@@ -11,18 +13,22 @@ import {
 
 /**
  * Adds edit actions to the context menu.
- * @param {import("@vcmap/ui").VcsUiApp} app The VcsUiApp instance
- * @param {MeasurementManager} manager The measurement manager
- * @param {string | symbol} owner The owner of the context menu entries.
+ * @param app The VcsUiApp instance
+ * @param manager The measurement manager
+ * @param owner The owner of the context menu entries.
  */
-export default function addContextMenu(app, manager, owner) {
+export default function addContextMenu(
+  app: VcsUiApp,
+  manager: MeasurementManager,
+  owner: string | symbol,
+): void {
   app.contextMenuManager.addEventHandler((event) => {
     const contextEntries = [];
     if (
       event.feature &&
       event.feature[vcsLayerName] === manager.currentLayer.value.name
     ) {
-      const targetFeature = event.feature;
+      const targetFeature = event.feature as Feature;
       let editFeatures = manager.currentFeatures.value;
       const isCreate =
         manager.currentSession.value?.type === SessionType.CREATE;
@@ -32,7 +38,7 @@ export default function addContextMenu(app, manager, owner) {
       ) {
         setTimeout(() => {
           // timeout prevents right click on opened editor window
-          manager.startSelectSession([event.feature]);
+          manager.startSelectSession([targetFeature]);
         }, 0);
         editFeatures = [targetFeature];
       } else if (
@@ -43,7 +49,10 @@ export default function addContextMenu(app, manager, owner) {
       ) {
         setTimeout(() => {
           // timeout prevents right click on opened editor window
-          manager.currentSession.value.setCurrentFeatures([event.feature]);
+          // eslint-disable-next-line no-void
+          void (
+            manager.currentSession.value as SelectFeaturesSession
+          ).setCurrentFeatures([event.feature as Feature]);
         }, 0);
         editFeatures = [targetFeature];
       }
@@ -57,27 +66,25 @@ export default function addContextMenu(app, manager, owner) {
             disabled:
               isCreate || !isSupportedMeasurement(editFeatures[0], event.map),
             callback() {
-              manager.startEditSession();
+              manager.startEditSession(editFeatures[0]);
             },
           });
         }
       }
 
-      const hideSelectionsAction = createHideSelectedAction(
-        manager,
-        'draw-context-hideSelected',
-      );
+      const hideSelectionsAction = createHideSelectedAction(manager);
       const deleteAction = createDeleteSelectedAction(
         manager,
-        null,
-        'draw-context-delete',
+        undefined,
       ).action;
       hideSelectionsAction.disabled = isCreate;
       deleteAction.disabled = isCreate;
 
       contextEntries.push(hideSelectionsAction, deleteAction);
     } else {
-      manager.currentSession.value?.clearSelection?.();
+      (
+        manager.currentSession.value as SelectFeaturesSession
+      )?.clearSelection?.();
     }
     return contextEntries;
   }, owner);

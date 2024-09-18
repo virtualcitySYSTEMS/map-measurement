@@ -1,4 +1,4 @@
-import { Feature } from 'ol';
+import Feature from 'ol/Feature.js';
 import {
   CesiumMap,
   GeometryType,
@@ -7,58 +7,65 @@ import {
   ObliqueMap,
   OpenlayersMap,
   originalFeatureSymbol,
+  Projection,
+  VcsMap,
 } from '@vcmap/core';
+import { VcsUiApp } from '@vcmap/ui';
+import { ShallowRef, shallowRef } from 'vue';
+import { Text } from 'ol/style.js';
+import { MeasurementManager } from '../measurementManager.js';
 
+export type MeasurementValues = {
+  type: MeasurementType;
+  area?: string;
+  circumference?: string;
+  distance?: string;
+  height?: string;
+  /** angle in vertical measurement */
+  alpha?: string;
+  /** angle in vertical measurement */
+  beta?: string;
+  /** horizontal distance in vertical measurement */
+  horizontal?: string;
+  /** point measurement coordinates */
+  pointPosition?: PositionValue;
+  /** positions of distance measurement coordinates */
+  vertexPositions?: Array<PositionValue>;
+
+  groundAltitude?: string;
+  heightAltitude?: string;
+};
 /**
- * @typedef {Object} MeasurementValues
- * @property {MeasurementType} type
- * @property {string|undefined} area
- * @property {string|undefined} circumference
- * @property {string|undefined} distance
- * @property {string|undefined} height
- * @property {string|undefined} alpha - angle in vertical measurement
- * @property {string|undefined} beta - angle in vertical measurement
- * @property {string|undefined} horizontal - horizontal distance in vertical measurement
- * @property {PositionValue|undefined} pointPosition - point measurement coordinates
- * @property {Array<PositionValue>} vertexPositions - positions of distance measurement coordinates
  * @api
  */
 
-/**
- * @typedef {Object} PositionValue
- * @property {string|undefined} id
- * @property {string|undefined} name
- * @property {number|undefined} x - point measurement coordinates
- * @property {number|undefined} y - point measurement coordinates
- * @property {number|undefined} z - point measurement coordinates
- * @api
- */
+type PositionValue = {
+  id: string | undefined;
+  name: string | undefined;
+  /** point measurement coordinates */
+  x: number | undefined;
+  /** point measurement coordinates */
+  y: number | undefined;
+  /** point measurement coordinates */
+  z: number | undefined;
+};
 
-/**
- * @type {symbol}
- */
 export const measurementModeSymbol = Symbol('measurementModeSymbol');
 
-/**
- * @type {symbol}
- */
 export const doNotEditAndPersistent = Symbol('doNotEditAndPersistentSymbol');
 
-/**
- * @type {string}
- */
 export const measurementTypeProperty = 'vcs_measurement_type';
 
-export const MeasurementType = {
-  Position3D: 'Position3D',
-  Position2D: 'Position2D',
-  Distance2D: 'Distance2D',
-  Area2D: 'Area2D',
-  Distance3D: 'Distance3D',
-  Area3D: 'Area3D',
-  Height3D: 'Height3D',
-  ObliqueHeight2D: 'ObliqueHeight2D',
-};
+export enum MeasurementType {
+  Position3D = 'Position3D',
+  Position2D = 'Position2D',
+  Distance2D = 'Distance2D',
+  Area2D = 'Area2D',
+  Distance3D = 'Distance3D',
+  Area3D = 'Area3D',
+  Height3D = 'Height3D',
+  ObliqueHeight2D = 'ObliqueHeight2D',
+}
 
 export const MeasurementGeometryType = {
   [MeasurementType.Position3D]: GeometryType.Point,
@@ -71,67 +78,80 @@ export const MeasurementGeometryType = {
   [MeasurementType.ObliqueHeight2D]: GeometryType.LineString,
 };
 
-export function getValues(feature) {
+export function getValues(feature: Feature): MeasurementValues {
   if (feature[measurementModeSymbol]) {
-    return feature[measurementModeSymbol].values;
+    return feature[measurementModeSymbol].values.value as MeasurementValues;
   }
-  return feature[originalFeatureSymbol]?.[measurementModeSymbol]?.values;
+  return feature[originalFeatureSymbol]?.[measurementModeSymbol]?.values
+    .value as MeasurementValues;
 }
 
-export function isSupportedMeasurement(feature, map) {
-  const supportedMaps =
+export function isSupportedMeasurement(feature: Feature, map: VcsMap): boolean {
+  const supportedMaps: string[] =
     feature[measurementModeSymbol]?.supportedMaps ??
     feature[originalFeatureSymbol]?.[measurementModeSymbol]?.supportedMaps ??
     [];
   return supportedMaps.includes(map.className);
 }
 
+type MeasurementModeOptions = {
+  app: VcsUiApp;
+  manager: MeasurementManager;
+};
+
 class MeasurementMode {
-  constructor(options) {
+  app: VcsUiApp;
+
+  manager: MeasurementManager;
+
+  projection: Projection;
+
+  decimalPlaces: number;
+
+  templateFeature: Feature;
+
+  values: ShallowRef<MeasurementValues>;
+
+  constructor(options: MeasurementModeOptions) {
     this.app = options.app;
     this.manager = options.manager;
     this.projection = getDefaultProjection();
     this.decimalPlaces = 2;
     this.templateFeature = this.createTemplateFeature();
-    this.values = this.defaultValues;
+    this.values = shallowRef(this.defaultValues);
   }
 
-  get defaultValues() {
+  get defaultValues(): MeasurementValues {
     return {
       type: this.type,
-      area: 0,
-      circumference: 0,
-      distance: 0,
-      height: 0,
-      alpha: 0,
-      beta: 0,
-      horizontal: 0,
+      area: '0',
+      circumference: '0',
+      distance: '0',
+      height: '0',
+      alpha: '0',
+      beta: '0',
+      horizontal: '0',
       pointPosition: undefined,
       vertexPositions: [],
     };
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Area2D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.Polygon;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className];
   }
 
-  /**
-   * @param {number} value
-   * @param {boolean=} [square=false]
-   * @returns {string}
-   */
-  getValue(value, square) {
+  getValue(value: number, square = false): string {
     let abs = Math.abs(value);
     const potential = square ? 2 : 1;
     let unit = square ? 'm²' : 'm';
@@ -144,7 +164,7 @@ class MeasurementMode {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  check(feature) {
+  check(feature: Feature): boolean {
     const geometry = feature.getGeometry();
     if (!geometry) {
       return false;
@@ -157,17 +177,18 @@ class MeasurementMode {
     return true;
   }
 
-  // eslint-disable-next-line class-methods-use-this,no-unused-vars
-  calcMeasurementResult(feature) {}
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
+    return Promise.resolve(this.check(feature));
+  }
 
   // eslint-disable-next-line class-methods-use-this
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const feature = new Feature();
     feature.set(measurementTypeProperty, this.type);
     return feature;
   }
 
-  static getDefaultText() {
+  static getDefaultText(): Text {
     return getTextFromOptions({
       font: 'bold 18px Arial',
       textBaseline: 'bottom',

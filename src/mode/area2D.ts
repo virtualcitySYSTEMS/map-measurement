@@ -3,11 +3,12 @@ import {
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
-  getFlatCoordinatesFromGeometry,
+  getFlatCoordinateReferences,
   OpenlayersMap,
   Projection,
 } from '@vcmap/core';
-import { Polygon } from 'ol/geom.js';
+import Feature from 'ol/Feature.js';
+import { Polygon, Geometry } from 'ol/geom.js';
 import {
   getDistance as haversineDistance,
   getArea as geodesicArea,
@@ -20,27 +21,27 @@ import MeasurementMode, {
 
 class Area2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Area2D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.Polygon;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className, OpenlayersMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (!this.check(feature)) {
       return Promise.resolve(false);
     }
 
-    const geometry = feature.getGeometry();
-    const coords = getFlatCoordinatesFromGeometry(geometry);
+    const geometry = feature.getGeometry()!;
+    const coords = getFlatCoordinateReferences(geometry);
 
     let circumference = 0;
     for (let i = 0; i < coords.length; i++) {
@@ -53,26 +54,29 @@ class Area2D extends MeasurementMode {
       }
     }
 
-    this.values.circumference = this.getValue(circumference);
-    this.values.area = this.getValue(geodesicArea(geometry), true);
+    this.values.value = {
+      type: this.type,
+      area: this.getValue(geodesicArea(geometry), true),
+      circumference: this.getValue(circumference),
+    };
     return Promise.resolve(true);
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new Polygon([]));
     return templateFeature;
   }
 
-  static getStyleFunction(highlight) {
+  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
-      : defaultVectorStyle.style;
+      : (defaultVectorStyle.style as Style);
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
-      geometry: (f) => {
-        return f.getGeometry().getInteriorPoint();
+      geometry: (f): Geometry => {
+        return (f.getGeometry() as Polygon).getInteriorPoint();
       },
     });
     return (feature) => {

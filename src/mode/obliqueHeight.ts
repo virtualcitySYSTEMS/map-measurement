@@ -9,18 +9,46 @@ import {
   getDefaultHighlightStyle,
   originalFeatureSymbol,
   ObliqueMap,
+  ObliqueImage,
+  CreateFeatureSession,
 } from '@vcmap/core';
+import { VcsUiApp } from '@vcmap/ui';
 import { Cartesian3, Matrix3 } from '@vcmap-cesium/engine';
+import Feature from 'ol/Feature.js';
+import { Coordinate } from 'ol/coordinate.js';
 import { transform } from 'ol/proj';
-import { LineString, Point } from 'ol/geom';
+import { Geometry, LineString, Point } from 'ol/geom';
 import { Style } from 'ol/style.js';
+import { MeasurementManager } from '../measurementManager.js';
 import MeasurementMode, {
   measurementModeSymbol,
   MeasurementType,
 } from './measurementMode.js';
 
+type ObliqueHeightOptions = {
+  app: VcsUiApp;
+  manager: MeasurementManager;
+};
 class ObliqueHeight extends MeasurementMode {
-  constructor(options) {
+  set: boolean;
+
+  selfCall: boolean;
+
+  measureVecGround: Cartesian3;
+
+  measureVecOrientation: Cartesian3;
+
+  startCoordinateTransformationPromise: Promise<boolean> | null;
+
+  startDistorted: Coordinate;
+
+  startUndistorted: Coordinate;
+
+  liftedUndistorted: Coordinate;
+
+  startPointRealWorld: Coordinate;
+
+  constructor(options: ObliqueHeightOptions) {
     super(options);
     this.set = false;
     this.selfCall = false;
@@ -28,38 +56,44 @@ class ObliqueHeight extends MeasurementMode {
     this.measureVecOrientation = new Cartesian3();
 
     this.startCoordinateTransformationPromise = null;
+    this.startDistorted = [];
+    this.startUndistorted = [];
+    this.liftedUndistorted = [];
+    this.startPointRealWorld = [];
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.ObliqueHeight2D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.LineString;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [ObliqueMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (this.selfCall) {
       this.selfCall = false;
       return Promise.resolve(false);
     }
 
-    const coords = feature.getGeometry().getCoordinates();
+    const coords: Coordinate[] = (
+      feature.getGeometry() as Geometry
+    ).getCoordinates();
 
     if (coords.length === 1) {
-      this.values = this.defaultValues;
+      this.values.value = this.defaultValues;
       return Promise.resolve(false);
     }
 
-    const map = this.app.maps.activeMap;
-    const { currentImage } = map;
+    const map = this.app.maps.activeMap as ObliqueMap;
+    const { currentImage } = map as { currentImage: ObliqueImage };
 
     if (!this.set && coords.length === 2) {
       if (!this.startCoordinateTransformationPromise) {
@@ -75,7 +109,8 @@ class ObliqueHeight extends MeasurementMode {
             0,
             this.measureVecGround,
           );
-          transformFromImage(currentImage, coords[0])
+          // eslint-disable-next-line no-void
+          void transformFromImage(currentImage, coords[0])
             .then((res) => {
               this.startPointRealWorld = res.coords;
               const lifted = res.coords.slice();
@@ -102,9 +137,10 @@ class ObliqueHeight extends MeasurementMode {
                 this.measureVecOrientation,
               );
               this.selfCall = true;
-              feature
-                .getGeometry()
-                .setCoordinates([this.startDistorted, this.startDistorted]);
+              (feature.getGeometry() as Geometry).setCoordinates([
+                this.startDistorted,
+                this.startDistorted,
+              ]);
               resolve(true);
             });
         });
@@ -112,7 +148,10 @@ class ObliqueHeight extends MeasurementMode {
       return this.startCoordinateTransformationPromise;
     } else if (this.set) {
       if (coords.length === 3) {
-        this.manager.currentSession.value.finish();
+        (
+          this.manager.currentSession
+            .value as CreateFeatureSession<GeometryType.LineString>
+        ).finish();
         this.selfCall = false;
         return Promise.resolve(true);
       }
@@ -137,8 +176,8 @@ class ObliqueHeight extends MeasurementMode {
       );
 
       const measurementCurrentPoint = [
-        intersectionMouse2GroundHeight.x,
-        intersectionMouse2GroundHeight.y,
+        intersectionMouse2GroundHeight.x!,
+        intersectionMouse2GroundHeight.y!,
       ];
       const measurementCurrentPointCorrected =
         currentImage.meta.radialDistortionCoordinate(
@@ -169,7 +208,10 @@ class ObliqueHeight extends MeasurementMode {
 
       let finalCoords;
       if (dot < 0 || Number.isNaN(dot)) {
-        this.values.height = this.getValue(0);
+        this.values.value = {
+          type: this.type,
+          height: this.getValue(0),
+        };
         finalCoords = [this.startDistorted, this.startDistorted];
       } else {
         const heightPos = this.findVertical3DPositionRegardingPixel(
@@ -177,50 +219,60 @@ class ObliqueHeight extends MeasurementMode {
           measurementCurrentPoint,
           this.startPointRealWorld,
         );
-        this.values.height = this.getValue(
-          distance3D(this.startPointRealWorld, heightPos),
-        );
+        this.values.value = {
+          type: this.type,
+          height: this.getValue(
+            distance3D(this.startPointRealWorld, heightPos),
+          ),
+        };
         finalCoords = [this.startDistorted, measurementCurrentPointCorrected];
       }
 
-      feature.getGeometry().setCoordinates(finalCoords);
+      feature.getGeometry()!.setCoordinates(finalCoords);
       return Promise.resolve(true);
     }
     return Promise.resolve(false);
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     return templateFeature;
   }
 
-  static getStyleFunction(highlight) {
+  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
-      : defaultVectorStyle.style;
+      : (defaultVectorStyle.style as Style);
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      geometry: (f): Geometry => {
+        const coords: Coordinate[] = (
+          f.getGeometry() as Geometry
+        ).getCoordinates();
         if (coords.length === 2) {
           return new Point(coords[1]);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
     return (feature) => {
       text.setText(
-        feature[originalFeatureSymbol]?.[measurementModeSymbol].values.height,
+        feature[originalFeatureSymbol]?.[measurementModeSymbol].values.value
+          .height,
       );
       return [defaultStyle, labelStyle];
     };
   }
 
   // eslint-disable-next-line class-methods-use-this
-  findVertical3DPositionRegardingPixel(map, pixelCoordinate, pointOnGround) {
-    const { currentImage } = map;
+  findVertical3DPositionRegardingPixel(
+    map: ObliqueMap,
+    pixelCoordinate: Coordinate,
+    pointOnGround: Coordinate,
+  ): Coordinate {
+    const { currentImage } = map as { currentImage: ObliqueImage };
 
     // calculate camera coordinates
     let imageCoordinates = new Cartesian3(
@@ -229,7 +281,7 @@ class ObliqueHeight extends MeasurementMode {
       1,
     );
     imageCoordinates = Matrix3.multiplyByVector(
-      currentImage.pToRealworld,
+      currentImage.pToRealworld!,
       imageCoordinates,
       imageCoordinates,
     );
@@ -250,7 +302,7 @@ class ObliqueHeight extends MeasurementMode {
     );
     let pointGroundVec = Cartesian3.fromArray(worldCoord);
     const b = Cartesian3.subtract(
-      currentImage.projectionCenter,
+      currentImage.projectionCenter!,
       pointGroundVec,
       new Cartesian3(),
     );

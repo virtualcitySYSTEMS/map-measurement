@@ -1,27 +1,35 @@
-import { writeGeoJSON } from '@vcmap/core';
-import { watch } from 'vue';
-import { downloadText } from '@vcmap/ui';
+import {
+  GeoJSONwriteOptions,
+  SelectFeaturesSession,
+  VectorLayer,
+  writeGeoJSON,
+} from '@vcmap/core';
+import { CollectionComponentClass, downloadText, VcsAction } from '@vcmap/ui';
+import { watch, WatchStopHandle } from 'vue';
+import Feature from 'ol/Feature';
+import { MeasurementManager } from '../measurementManager.js';
+import { SimpleMeasurementItem } from '../category/simpleCategory.js';
 
 /**
- *
- * @param {import('../measurementManager.js').MeasurementManager} manager The measurement manager
- * @param {string | number} id The action id
- * @returns {import("@vcmap/ui").VcsAction} A VcsAction for deleting the current features.
+ * @param manager The measurement manager
+ * @returns A VcsAction for deleting the current features.
  */
-export function createHideSelectedAction(manager, id) {
+export function createHideSelectedAction(
+  manager: MeasurementManager,
+): VcsAction {
   return {
-    id,
     name: 'measurement.category.hideSelected',
     icon: '$vcsCheckboxChecked',
-    callback() {
+    callback(): void {
       // XXX Copy paste from simple category
       const layer = manager.getDefaultLayer();
       if (
         manager.currentLayer.value === layer &&
         manager.currentFeatures.value?.length > 0 &&
-        manager.currentSession.value?.currentFeatures?.length
+        (manager.currentSession.value as SelectFeaturesSession)?.currentFeatures
+          ?.length
       ) {
-        const ids = manager.currentFeatures.value.map((f) => f.getId());
+        const ids = manager.currentFeatures.value.map((f) => f.getId()!);
         manager.currentLayer.value.featureVisibility.hideObjects(ids);
       }
     },
@@ -29,37 +37,33 @@ export function createHideSelectedAction(manager, id) {
 }
 
 /**
- *
- * @param {import('../measurementManager.js').MeasurementManager} manager The measurement manager
- * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
- * @param {string | number} id The action id
- * @param {boolean} [hasIcon=true] Whether the action should have an icon or not.
- * @returns {{action: import("@vcmap/ui").VcsAction, destroy: import('vue').WatchStopHandle}} A VcsAction for deleting selected features and the corresponding destroy function.
+ * @param manager The measurement manager
+ * @param collectionComponent The collection component of the category.
+ * @param hasIcon Whether the action should have an icon or not.
+ * @returns A VcsAction for deleting selected features and the corresponding destroy function.
  */
 export function createDeleteSelectedAction(
-  manager,
-  collectionComponent,
-  id,
+  manager: MeasurementManager,
+  collectionComponent?: CollectionComponentClass<SimpleMeasurementItem>,
   hasIcon = true,
-) {
-  const removeAction = {
-    id,
+): { action: VcsAction; destroy: WatchStopHandle } {
+  const removeAction: VcsAction = {
     name: 'measurement.category.removeSelected',
     icon: hasIcon ? '$vcsTrashCan' : undefined,
-    callback() {
+    callback(): void {
       if (collectionComponent) {
         manager.currentLayer.value.removeFeaturesById(
           collectionComponent.selection.value.map((s) => s.name),
         );
       } else if (manager.currentFeatures.value?.length > 0) {
         manager.currentLayer.value.removeFeaturesById(
-          manager.currentFeatures.value.map((f) => f.getId()),
+          manager.currentFeatures.value.map((f) => f.getId()!),
         );
       }
     },
   };
 
-  let destroyWatcher = () => {};
+  let destroyWatcher = (): void => {};
   if (collectionComponent) {
     destroyWatcher = watch(
       collectionComponent.selection,
@@ -76,7 +80,11 @@ export function createDeleteSelectedAction(
   };
 }
 
-function exportFeatures(features, layer, writeOptions) {
+function exportFeatures(
+  features: Feature[],
+  layer: VectorLayer,
+  writeOptions: GeoJSONwriteOptions,
+): void {
   const text = writeGeoJSON(
     {
       features,
@@ -89,10 +97,13 @@ function exportFeatures(features, layer, writeOptions) {
 
 /**
  * Creates an action that exports all selected features. If no features are selected, all features of the editorManagers layer are exported.
- * @param {import('../editorManager.js').EditorManager} manager The editorManager
- * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
+ * @param manager The editorManager
+ * @param collectionComponent The collection component of the category.
  */
-export function createExportCallback(manager, collectionComponent) {
+export function createExportCallback(
+  manager: MeasurementManager,
+  collectionComponent: CollectionComponentClass<SimpleMeasurementItem>,
+): void {
   const writeOptions = {
     writeStyle: true,
     embedIcons: true,

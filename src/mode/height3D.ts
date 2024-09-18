@@ -1,12 +1,15 @@
 import {
   CesiumMap,
+  CreateFeatureSession,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
   Projection,
 } from '@vcmap/core';
-import { LineString, Point } from 'ol/geom.js';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
+import { Geometry, LineString, Point } from 'ol/geom.js';
+import { Coordinate } from 'ol/coordinate.js';
+import Feature from 'ol/Feature.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
   getValues,
@@ -21,32 +24,35 @@ const cartesianMap = [
 
 class Height3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Height3D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.LineString;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (!this.check(feature)) {
       return Promise.resolve(false);
     }
 
-    const coords = feature.getGeometry().getCoordinates();
+    const coords: Coordinate[] = feature.getGeometry()!.getCoordinates();
 
     if (
       coords.length === 3 &&
       this.manager.currentSession.value?.type === 'create'
     ) {
-      this.manager.currentSession.value.finish();
+      (
+        this.manager.currentSession
+          .value as CreateFeatureSession<GeometryType.LineString>
+      ).finish();
       return Promise.resolve(false);
     }
 
@@ -73,7 +79,7 @@ class Height3D extends MeasurementMode {
         );
       }
 
-      const scratchValues = {
+      const scratchValues: { [key: string]: number } = {
         horizontal: 0,
         height: 0,
         distance: 0,
@@ -86,36 +92,44 @@ class Height3D extends MeasurementMode {
           cartesians[indices[1]],
         );
         scratchValues[key] = val;
-        this.values[key] = this.getValue(val);
+        // eslint-disable-next-line
+        // @ts-ignore
+        this.values.value[key] = this.getValue(val);
       }
 
       const alpha = CesiumMath.toDegrees(
         Math.asin(scratchValues.horizontal / scratchValues.distance),
       );
       const beta = 90 - alpha;
-      this.values.alpha = `${alpha.toFixed(this.decimalPlaces)}°`;
-      this.values.beta = `${beta.toFixed(this.decimalPlaces)}°`;
-      this.values.groundAltitude = this.getValue(coords[lowerPoint][2]);
-      this.values.heightAltitude = this.getValue(thirdPoint[2]);
+
+      this.values.value = {
+        ...this.values.value,
+        alpha: `${alpha.toFixed(this.decimalPlaces)}°`,
+        beta: `${beta.toFixed(this.decimalPlaces)}°`,
+        groundAltitude: this.getValue(coords[lowerPoint][2]),
+        heightAltitude: this.getValue(thirdPoint[2]),
+      };
     }
     return Promise.resolve(true);
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');
     return templateFeature;
   }
 
-  static getStyleFunction(highlight) {
+  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
-      : defaultVectorStyle.style;
+      : (defaultVectorStyle.style as Style);
     const triangleStyle = new Style({
-      stroke: defaultStyle.getStroke(),
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      stroke: defaultStyle.getStroke() ?? undefined,
+      geometry: (f): Geometry => {
+        const coords: Coordinate[] = (
+          f.getGeometry() as Geometry
+        ).getCoordinates();
         if (coords.length === 2) {
           const lowerPoint =
             coords[0][2] < coords[1][2] ? coords[0] : coords[1];
@@ -128,29 +142,33 @@ class Height3D extends MeasurementMode {
             lowerPoint,
           ]);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
 
     const heightStyleText = MeasurementMode.getDefaultText();
     const heightStyle = new Style({
       text: heightStyleText,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      geometry: (f): Geometry => {
+        const coords: Coordinate[] = (
+          f.getGeometry() as Geometry
+        ).getCoordinates();
         if (coords.length === 2) {
           const position = coords[0][2] < coords[1][2] ? coords[0] : coords[1];
           position[2] = (coords[0][2] + coords[1][2]) * 0.5;
           return new Point(position);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
 
     const horizontalStyleText = MeasurementMode.getDefaultText();
     const horizontalStyle = new Style({
       text: horizontalStyleText,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      geometry: (f): Geometry => {
+        const coords: Coordinate[] = (
+          f.getGeometry() as Geometry
+        ).getCoordinates();
         if (coords.length === 2) {
           const height = Math.max(coords[0][2], coords[1][2]);
           return new Point([
@@ -159,15 +177,17 @@ class Height3D extends MeasurementMode {
             height,
           ]);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
 
     const distanceStyleText = MeasurementMode.getDefaultText();
     const distanceStyle = new Style({
       text: distanceStyleText,
-      geometry: (f) => {
-        const coords = f.getGeometry().getCoordinates();
+      geometry: (f): Geometry => {
+        const coords: Coordinate[] = (
+          f.getGeometry() as Geometry
+        ).getCoordinates();
         if (coords.length === 2) {
           return new Point([
             (coords[0][0] + coords[1][0]) * 0.5,
@@ -175,7 +195,7 @@ class Height3D extends MeasurementMode {
             (coords[0][2] + coords[1][2]) * 0.5,
           ]);
         }
-        return f.getGeometry();
+        return f.getGeometry() as Geometry;
       },
     });
 

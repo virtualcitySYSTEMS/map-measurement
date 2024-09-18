@@ -3,45 +3,44 @@ import {
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
-  getFlatCoordinatesFromGeometry,
+  getFlatCoordinateReferences,
   Projection,
 } from '@vcmap/core';
-import { Polygon } from 'ol/geom.js';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
+import Feature from 'ol/Feature.js';
+import { Geometry, Polygon } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
   getValues,
   MeasurementType,
 } from './measurementMode.js';
 
-/** @type {Cesium/Cartesian3} */
-let scratchAB = new Cartesian3();
-/** @type {Cesium/Cartesian3} */
-let scratchAC = new Cartesian3();
+let scratchAB: Cartesian3 = new Cartesian3();
+let scratchAC: Cartesian3 = new Cartesian3();
 
 class Area3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Area3D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.Polygon;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (!this.check(feature)) {
       return Promise.resolve(false);
     }
 
-    const geometry = feature.getGeometry();
-    const coords = getFlatCoordinatesFromGeometry(geometry);
+    const geometry = feature.getGeometry()!;
+    const coords = getFlatCoordinateReferences(geometry);
 
     const coordsLength = coords.length;
     const cartesian3Array = new Array(coordsLength);
@@ -92,30 +91,33 @@ class Area3D extends MeasurementMode {
       area += Cartesian3.magnitude(scratchAB) / 2;
     }
 
-    this.values.height = height;
-    this.values.area = this.getValue(area, true);
-    this.values.circumference = this.getValue(circumference);
+    this.values.value = {
+      type: this.type,
+      area: this.getValue(area, true),
+      circumference: this.getValue(circumference),
+      height: height.toString(),
+    };
     return Promise.resolve(true);
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new Polygon([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');
     return templateFeature;
   }
 
-  static getStyleFunction(highlight) {
+  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
-      : defaultVectorStyle.style;
+      : (defaultVectorStyle.style as Style);
     const text = MeasurementMode.getDefaultText();
     const labelStyle = new Style({
       text,
-      geometry: (f) => {
-        const position = f.getGeometry().getInteriorPoint();
+      geometry: (f): Geometry => {
+        const position = (f.getGeometry() as Polygon).getInteriorPoint();
         const labelCoords = position.getCoordinates();
-        labelCoords[2] = getValues(f)?.height || 0;
+        labelCoords[2] = +(getValues(f as Feature)?.height ?? 0);
         position.setCoordinates(labelCoords);
         return position;
       },

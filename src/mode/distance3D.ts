@@ -1,47 +1,41 @@
 import {
   CesiumMap,
   GeometryType,
-  getFlatCoordinatesFromGeometry,
+  getFlatCoordinateReferences,
   mercatorProjection,
   Projection,
 } from '@vcmap/core';
-import { LineString } from 'ol/geom';
 import { Cartesian3 } from '@vcmap-cesium/engine';
+import { LineString } from 'ol/geom';
+import Feature from 'ol/Feature.js';
 import MeasurementMode, { MeasurementType } from './measurementMode.js';
 
-/**
- * @type {Cesium/Cartesian3}
- */
-let startCartesian = new Cartesian3();
-
-/**
- * @type {Cesium/Cartesian3}
- */
-let endCartesian = new Cartesian3();
+let startCartesian: Cartesian3 = new Cartesian3();
+let endCartesian: Cartesian3 = new Cartesian3();
 
 class Distance3D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
-  get type() {
+  get type(): MeasurementType {
     return MeasurementType.Distance3D;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get geometryType() {
+  get geometryType(): GeometryType {
     return GeometryType.LineString;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  get supportedMaps() {
+  get supportedMaps(): string[] {
     return [CesiumMap.className];
   }
 
-  calcMeasurementResult(feature) {
+  calcMeasurementResult(feature: Feature): Promise<boolean> {
     if (!this.check(feature)) {
       return Promise.resolve(false);
     }
 
-    const geometry = feature.getGeometry();
-    const coords = getFlatCoordinatesFromGeometry(geometry);
+    const geometry = feature.getGeometry()!;
+    const coords = getFlatCoordinateReferences(geometry);
 
     const positions = [];
     for (let i = 0; i < coords.length - 1; i++) {
@@ -51,16 +45,16 @@ class Distance3D extends MeasurementMode {
         coords[i],
       );
       positions.push({
-        id: positions.length + 1,
+        id: (positions.length + 1).toString(),
         name: undefined,
-        x: coordinate[0].toFixed(this.decimalPlaces),
-        y: coordinate[1].toFixed(this.decimalPlaces),
-        z: coordinate[2].toFixed(this.decimalPlaces),
+        x: +coordinate[0].toFixed(this.decimalPlaces),
+        y: +coordinate[1].toFixed(this.decimalPlaces),
+        z: +coordinate[2].toFixed(this.decimalPlaces),
       });
     }
 
     let distance = 0;
-    this.segmentDistance = new Array(coords.length - 1);
+    const segmentDistance = new Array(coords.length - 1);
     Projection.mercatorToWgs84(coords[0], true);
     startCartesian = Cartesian3.fromDegrees(
       coords[0][0],
@@ -78,20 +72,23 @@ class Distance3D extends MeasurementMode {
         undefined,
         endCartesian,
       );
-      this.segmentDistance[i - 1] = Cartesian3.distance(
+      segmentDistance[i - 1] = Cartesian3.distance(
         startCartesian,
         endCartesian,
       );
-      distance += this.segmentDistance[i - 1];
+      distance += segmentDistance[i - 1];
       startCartesian = Cartesian3.clone(endCartesian);
     }
-    this.values.vertexPositions = positions;
-    this.values.distance = this.getValue(distance);
 
+    this.values.value = {
+      type: this.type,
+      distance: this.getValue(distance),
+      vertexPositions: positions,
+    };
     return Promise.resolve(true);
   }
 
-  createTemplateFeature() {
+  createTemplateFeature(): Feature {
     const templateFeature = super.createTemplateFeature();
     templateFeature.setGeometry(new LineString([]));
     templateFeature.set('olcs_altitudeMode', 'absolute');

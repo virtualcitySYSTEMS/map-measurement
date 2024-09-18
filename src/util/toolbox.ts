@@ -1,18 +1,31 @@
-import { watch } from 'vue';
-import { SessionType } from '@vcmap/core';
-import { ToolboxType } from '@vcmap/ui';
+import { reactive, watch } from 'vue';
+import { GeometryType, SessionType } from '@vcmap/core';
+import {
+  SelectToolboxComponentOptions,
+  ToolboxType,
+  VcsUiApp,
+} from '@vcmap/ui';
 import { name } from '../../package.json';
-import { createMeasurementMode } from '../measurementManager.js';
+import {
+  createMeasurementMode,
+  MeasurementManager,
+} from '../measurementManager.js';
 import {
   MeasurementGeometryType,
   MeasurementType,
 } from '../mode/measurementMode.js';
 
-/**
- * @typedef {Object} MeasurementToolbox
- * @property {import("@vcmap/ui/src/manager/toolbox/toolboxManager").SingleToolboxComponentOptions|import("@vcmap/ui/src/manager/toolbox/toolboxManager").SelectToolboxComponentOptions} toolbox
- * @property {function():void} destroy
- */
+type MeasurementToolbox = {
+  toolbox: SelectToolboxComponentOptions;
+  destroy: () => void;
+};
+
+type MeasurementToolButton = {
+  name: MeasurementType;
+  title: string;
+  icon: string;
+  geometryType: GeometryType;
+};
 
 export const MeasurementTypeIcon = {
   [MeasurementType.Position3D]: '$vcs3dPoint',
@@ -25,32 +38,30 @@ export const MeasurementTypeIcon = {
   [MeasurementType.ObliqueHeight2D]: '$vcs2dHeightOblique',
 };
 
-/**
- * @param {MeasurementManager} manager
- * @returns {MeasurementToolbox}
- */
-function createCreateToolbox(manager) {
-  const createCreateButton = (measurementType) => ({
+function createCreateToolbox(manager: MeasurementManager): MeasurementToolbox {
+  const createCreateButton = (
+    measurementType: MeasurementType,
+  ): MeasurementToolButton => ({
     name: measurementType,
     title: `measurement.create.tooltip.${measurementType}`,
     icon: MeasurementTypeIcon[measurementType],
     geometryType: MeasurementGeometryType[measurementType],
   });
 
-  const toolbox = {
+  const toolbox: SelectToolboxComponentOptions = {
     type: ToolboxType.SELECT,
-    action: {
+    action: reactive({
       name: 'creation',
-      currentIndex: 1,
+      currentIndex: 0,
       active: false,
-      callback() {
+      callback(): void {
         if (this.active) {
           manager.stop();
         } else {
           manager.startCreateSession(this.tools[this.currentIndex].name);
         }
       },
-      selected(newIndex) {
+      selected(newIndex: number): void {
         this.currentIndex = newIndex;
         manager.startCreateSession(this.tools[this.currentIndex].name);
       },
@@ -64,7 +75,7 @@ function createCreateToolbox(manager) {
         createCreateButton(MeasurementType.ObliqueHeight2D),
         createCreateButton(MeasurementType.Height3D),
       ],
-    },
+    }),
   };
 
   const destroy = watch(manager.currentSession, () => {
@@ -77,7 +88,7 @@ function createCreateToolbox(manager) {
         toolbox.action.active &&
         currentSession?.type === SessionType.CREATE
       ) {
-        const toolName = manager.currentMeasurementMode.value.type;
+        const toolName = manager.currentMeasurementMode.value!.type;
         const index = toolbox.action.tools.findIndex(
           (t) => t.name === toolName,
         );
@@ -94,27 +105,25 @@ function createCreateToolbox(manager) {
   };
 }
 
-/**
- * @param {MeasurementManager} manager
- * @param {import("@vcmap/ui").VcsUiApp} app
- * @returns {function():void}
- */
-export function addToolButtons(manager, app) {
+export function addToolButtons(
+  manager: MeasurementManager,
+  app: VcsUiApp,
+): () => void {
   const { toolbox: createToolbox, destroy: destroyCreateToolbox } =
     createCreateToolbox(manager);
   const createId = app.toolboxManager.add(createToolbox, name).id;
 
-  function updateTools() {
+  function updateTools(): void {
     createToolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
 
     const filteredTools = createToolbox.action.tools.filter((tool) => {
       return createMeasurementMode(
-        tool.name,
+        tool.name as MeasurementType,
         app,
         manager,
-      )?.supportedMaps.includes(app.maps.activeMap?.className);
+      )?.supportedMaps.includes(app.maps.activeMap!.className);
     });
 
     filteredTools.forEach((tool) => {
@@ -134,10 +143,10 @@ export function addToolButtons(manager, app) {
           .getFeatures()
           .filter(
             (f) =>
-              !manager.category.value.collection.hasKey(f.getId()) &&
+              !manager.category?.collection.hasKey(f.getId()!) &&
               manager.currentSession.value?.type === SessionType.CREATE,
           )
-          .map((f) => f.getId()),
+          .map((f) => f.getId()!),
       );
     }
 

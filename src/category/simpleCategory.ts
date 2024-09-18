@@ -1,3 +1,4 @@
+// eslint-disable-next-line max-classes-per-file
 import {
   Category,
   writeGeoJSONFeature,
@@ -6,27 +7,38 @@ import {
   mercatorProjection,
   Extent,
   FeatureVisibilityAction,
+  VectorLayer,
+  VcsObjectOptions,
+  SelectFeaturesSession,
 } from '@vcmap/core';
+import {
+  CollectionComponentClass,
+  CollectionComponentListItem,
+  VcsUiApp,
+} from '@vcmap/ui';
+import { reactive } from 'vue';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable.js';
 import { isEmpty } from 'ol/extent.js';
+import { MeasurementManager } from '../measurementManager.js';
 import { name } from '../../package.json';
 import { createDeleteSelectedAction } from '../util/actionHelper.js';
-import { measurementModeSymbol } from '../mode/measurementMode.js';
+import {
+  measurementModeSymbol,
+  MeasurementType,
+} from '../mode/measurementMode.js';
 
-/**
- * @typedef {Object} SimpleMeasurementItem
- * @property {string} id
- * @property {string} name
- * @property {import("ol").Feature} feature
- */
+export type SimpleMeasurementItem = VcsObjectOptions & {
+  id: string;
+  name: string;
+  feature: Feature;
+};
 
-/**
- * @param {import("ol").Feature} feature
- * @param {import("@vcmap/core").VectorLayer} layer
- * @param {import("../util/toolbox.js").MeasurementType} typeName
- */
-function setTitleOnFeature(feature, layer, typeName) {
+function setTitleOnFeature(
+  feature: Feature,
+  layer: VectorLayer,
+  typeName: MeasurementType,
+): void {
   let featureName;
   let count = 0;
 
@@ -34,7 +46,7 @@ function setTitleOnFeature(feature, layer, typeName) {
     layer
       .getFeatures()
       .filter((f) => f[measurementModeSymbol]?.type === typeName)
-      .map((f) => f.get('title')),
+      .map((f) => f.get('title') as string),
   );
 
   do {
@@ -47,150 +59,132 @@ function setTitleOnFeature(feature, layer, typeName) {
   feature.set('title', featureName);
 }
 
-/**
- * @class
- * @extends {Category<SimpleMeasurementItem>}
- */
-class SimpleMeasurementCategory extends Category {
-  static get className() {
+class SimpleMeasurementCategory extends Category<SimpleMeasurementItem> {
+  static get className(): string {
     return 'SimpleMeasurementCategory';
   }
 
-  constructor(options) {
+  protected _layer: VectorLayer | null;
+
+  _layerListeners: () => void;
+
+  constructor(options: VcsObjectOptions) {
     super(options);
-    /**
-     * @type {import("@vcmap/core").VectorLayer|null}
-     * @private
-     */
     this._layer = null;
-    this._manager = options.manager;
-    this._layerListeners = () => {};
-    this._setCurrentLayer(options.manager.getDefaultLayer());
-    this._manager.category.value = this;
+    this._layerListeners = (): void => {};
   }
 
-  addToCollection(feature) {
+  addToCollection(feature: Feature): void {
     if (!this.collection.hasKey(feature.getId())) {
       if (!feature.get('title')) {
         const { type } = feature[measurementModeSymbol];
-        setTitleOnFeature(feature, this._layer, type);
+        setTitleOnFeature(feature, this._layer!, type);
       }
       this.collection.add({
-        name: feature.getId(),
+        id: feature.getId()!.toString(),
+        name: feature.getProperty('title'),
         feature,
       });
     }
   }
 
-  /**
-   * @param {import("@vcmap/core").VectorLayer} layer
-   */
-  _setCurrentLayer(layer) {
+  setCurrentLayer(layer: VectorLayer): void {
     this._layerListeners();
     this._layer = layer;
     const source = layer.getSource();
 
     // In case the collection already has layers
     [...this.collection].forEach((item) => {
-      if (!this._layer.getFeatureById(item.name)) {
+      if (!this._layer?.getFeatureById(item.name)) {
         this._itemAdded(item);
       }
     });
 
     const sourceListeners = [
       source.on('removefeature', ({ feature }) => {
-        const item = this.collection.getByKey(feature.getId());
+        const item = this.collection.getByKey(feature?.getId());
         if (item) {
           this.collection.remove(item);
         }
       }),
     ];
 
-    this._layerListeners = () => {
+    this._layerListeners = (): void => {
       unByKey(sourceListeners);
     };
   }
 
-  mergeOptions(options) {
+  mergeOptions(options: VcsObjectOptions): void {
     super.mergeOptions(options);
-    this._manager.category.value = undefined;
-    this._manager = options.manager;
-    this._setCurrentLayer(options.manager.getDefaultLayer());
-    this._manager.category.value = this;
   }
 
-  _itemAdded(item) {
+  _itemAdded(item: SimpleMeasurementItem): void {
     // Is needed because in core the feature first gets removed, which triggers the source listener above and ends in an event trigger cicle that does not stop.
     // If in core intead of removing, just checking if it is already existing AND set item.name as features id ->>> no need to override original function
-    if (!this._layer.getFeatureById(item.name)) {
+    if (!this._layer?.getFeatureById(item.name)) {
       let { feature } = item;
       if (!(feature instanceof Feature)) {
         const features = parseGeoJSON(feature);
         feature = Array.isArray(features) ? features[0] : features;
       }
       feature.setId(item.name);
-      this._layer.addFeatures([feature]);
+      this._layer!.addFeatures([feature]);
     }
   }
 
-  _itemRemoved(item) {
-    if (this._layer.getFeatureById(item.name)) {
+  _itemRemoved(item: SimpleMeasurementItem): void {
+    if (this._layer?.getFeatureById(item.name)) {
       this._layer.removeFeaturesById([item.name]);
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  async _deserializeItem(item) {
+  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/require-await
+  _deserializeItem(
+    item: SimpleMeasurementItem,
+  ): Promise<SimpleMeasurementItem> {
     const { features } = parseGeoJSON(item.feature);
     if (features[0]) {
       // XXX do we warn on feature collection?
       item.feature = features[0];
     }
-    return item;
+    return Promise.resolve(item);
   }
 
   // eslint-disable-next-line class-methods-use-this
-  _serializeItem(item) {
+  _serializeItem(item: SimpleMeasurementItem): SimpleMeasurementItem {
     return {
+      id: item.id,
       name: item.name,
       feature: writeGeoJSONFeature(item.feature),
     };
   }
 
-  destroy() {
-    this._layerListeners = () => {};
+  destroy(): void {
+    this._layerListeners = (): void => {};
     this._layer = null;
-    this._manager.category.value = undefined;
     super.destroy();
   }
 }
 
 export default SimpleMeasurementCategory;
 
-/**
- * @param {import("@vcmap/ui").VcsUiApp} vcsApp
- * @param {import("../measurementManager.js").MeasurementManager} manager
- * @param {SimpleMeasurementItem} featureItem
- * @param {Category<SimpleMeasurementItem>} c
- * @param {VcsListItem} categoryListItem
- */
 function itemMappingFunction(
-  vcsApp,
-  manager,
-  featureItem,
-  c,
-  categoryListItem,
-) {
+  app: VcsUiApp,
+  manager: MeasurementManager,
+  featureItem: SimpleMeasurementItem,
+  _c: CollectionComponentClass<SimpleMeasurementItem>,
+  categoryListItem: CollectionComponentListItem,
+): void {
   const featureId = featureItem.feature.getId();
   categoryListItem.title = featureItem.feature.get('title') ?? 'Object';
   const layer = manager.getDefaultLayer();
 
-  let hidden = layer.featureVisibility.hiddenObjects[featureItem.name];
+  let hidden = !!layer.featureVisibility.hiddenObjects[featureItem.name];
 
-  const hideAction = {
+  const hideAction = reactive({
     name: 'hideAction',
     icon: hidden ? '$vcsCheckbox' : '$vcsCheckboxChecked',
-    callback() {
+    callback(): void {
       if (!hidden) {
         layer.featureVisibility.hideObjects([featureItem.name]);
         hidden = true;
@@ -201,7 +195,7 @@ function itemMappingFunction(
         this.icon = '$vcsCheckboxChecked';
       }
     },
-  };
+  });
 
   const hideListener = layer.featureVisibility.changed.addEventListener(
     (event) => {
@@ -216,13 +210,13 @@ function itemMappingFunction(
     },
   );
 
-  categoryListItem.selectionChanged = (selected) => {
+  categoryListItem.selectionChanged = (selected): void => {
     if (selected && hidden) {
       hideAction.callback();
     }
   };
 
-  categoryListItem.titleChanged = (newTitle) => {
+  categoryListItem.titleChanged = (newTitle): void => {
     categoryListItem.title = newTitle;
     featureItem.feature.set('title', newTitle);
   };
@@ -232,7 +226,7 @@ function itemMappingFunction(
       hideAction,
       {
         name: 'measurement.category.zoomTo',
-        async callback() {
+        async callback(): Promise<void> {
           const extent = featureItem.feature.getGeometry()?.getExtent?.();
           if (extent && !isEmpty(extent)) {
             const vp = Viewpoint.createViewpointFromExtent(
@@ -241,46 +235,48 @@ function itemMappingFunction(
                 projection: mercatorProjection.toJSON(),
               }),
             );
-            vp.animate = true;
-            await vcsApp.maps.activeMap?.gotoViewpoint(vp);
+            if (vp) {
+              vp.animate = true;
+              await app.maps.activeMap?.gotoViewpoint(vp);
+            }
           }
         },
       },
       {
         name: 'measurement.category.remove',
-        callback() {
+        callback(): void {
           if (manager.currentFeatures.value.includes(featureItem.feature)) {
             const newFeatures = manager.currentFeatures.value.filter(
               (feature) => feature.getId() !== featureId,
             );
             manager.currentFeatures.value = newFeatures;
           }
-          layer.removeFeaturesById([featureId]);
+          layer.removeFeaturesById([featureId!]);
         },
       },
     ],
   );
 
-  categoryListItem.destroy = () => {
+  categoryListItem.destroy = (): void => {
     hideListener();
   };
 }
 
-/**
- * @param {import("../measurementManager.js").MeasurementManager} manager
- * @param {VcsUiApp} vcsApp
- * @returns {function():void}
- */
-export async function createCategory(manager, vcsApp) {
+export async function createCategory(
+  manager: MeasurementManager,
+  app: VcsUiApp,
+): Promise<{
+  categoryUiItem: CollectionComponentClass<SimpleMeasurementItem>;
+  destroy: () => void;
+}> {
   const layer = manager.currentLayer.value;
 
   const { collectionComponent: categoryUiItem, category } =
-    await vcsApp.categoryManager.requestCategory(
+    await app.categoryManager.requestCategory<SimpleMeasurementItem>(
       {
         type: SimpleMeasurementCategory.className,
         name: 'Simple Measurement',
         title: 'Measurements',
-        manager,
         featureProperty: 'feature',
       },
       name,
@@ -291,10 +287,13 @@ export async function createCategory(manager, vcsApp) {
       },
     );
 
-  const hideAllAction = {
+  manager.category = category as SimpleMeasurementCategory;
+  manager.category.setCurrentLayer(layer);
+
+  const hideAllAction = reactive({
     name: 'hideAllAction',
     icon: '$vcsCheckboxChecked',
-    callback() {
+    callback(): void {
       const hiddenObjectIds = Object.keys(
         layer.featureVisibility.hiddenObjects,
       );
@@ -304,10 +303,12 @@ export async function createCategory(manager, vcsApp) {
         )
       ) {
         layer.featureVisibility.hideObjects(
-          layer.getFeatures().map((feature) => feature.getId()),
+          layer.getFeatures().map((feature) => feature.getId()!),
         );
         if (manager.currentFeatures.value) {
-          manager.currentSession.value.clearSelection?.();
+          (
+            manager.currentSession.value as SelectFeaturesSession
+          ).clearSelection?.();
         }
         this.icon = '$vcsCheckbox';
       } else {
@@ -315,7 +316,7 @@ export async function createCategory(manager, vcsApp) {
         this.icon = '$vcsCheckboxChecked';
       }
     },
-  };
+  });
 
   const destroyHideAllAction = layer.featureVisibility.changed.addEventListener(
     (event) => {
@@ -346,30 +347,23 @@ export async function createCategory(manager, vcsApp) {
   );
 
   const { action: removeAction, destroy: destroyRemoveAction } =
-    createDeleteSelectedAction(
-      manager,
-      categoryUiItem,
-      'measurement-category-removeSelected',
-      false,
-    );
+    createDeleteSelectedAction(manager, categoryUiItem, false);
 
-  vcsApp.categoryManager.addActions([hideAllAction, removeAction], name, [
+  app.categoryManager.addActions([hideAllAction, removeAction], name, [
     categoryUiItem.id,
   ]);
 
-  vcsApp.categoryManager.addMappingFunction(
-    () => {
-      return true;
-    },
-    itemMappingFunction.bind(null, vcsApp, manager),
+  app.categoryManager.addMappingFunction(
+    () => true,
+    itemMappingFunction.bind(null, app, manager),
     name,
     [category.name],
   );
 
   return {
     categoryUiItem,
-    destroy() {
-      vcsApp.categoryManager.removeOwner(name);
+    destroy(): void {
+      app.categoryManager.removeOwner(name);
       destroyRemoveAction();
       destroyHideAllAction();
     },

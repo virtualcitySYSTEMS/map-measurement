@@ -1,32 +1,33 @@
-import { watch, ref } from 'vue';
-import { SessionType } from '@vcmap/core';
+import { watch, ref, Ref } from 'vue';
+import { SelectFeaturesSession, SessionType } from '@vcmap/core';
 import {
   createListExportAction,
   createListImportAction,
   importIntoLayer,
   makeEditorCollectionComponentClass,
+  VcsUiApp,
   WindowSlot,
+  CollectionComponentClass,
 } from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
-import { name } from '../../package.json';
+import { SimpleMeasurementItem } from '../category/simpleCategory.js';
 import measurementWindow from './measurementWindow.vue';
 import { MeasurementTypeIcon } from '../util/toolbox.js';
 import { createExportCallback } from '../util/actionHelper.js';
+import { MeasurementManager } from '../measurementManager.js';
+import { name } from '../../package.json';
 
 /**
- * @param {MeasurementManager} manager
- * @param {import("@vcmap/ui").VcsUiApp} app
- * @param {import("@vcmap/ui").CollectionComponent} collectionComponent The collection component of the category.
- * @returns {function():void}
+ * @param collectionComponent The collection component of the category.
  */
 export default function setupMeasurementResultWindow(
-  manager,
-  app,
-  collectionComponent,
-) {
-  let renameListener = () => {};
-  const headerTitle = ref();
-  const headerIcon = ref();
+  manager: MeasurementManager,
+  app: VcsUiApp,
+  collectionComponent: CollectionComponentClass<SimpleMeasurementItem>,
+): { destroy: () => void } {
+  let renameListener = (): void => {};
+  const headerTitle: Ref<string> = ref('');
+  const headerIcon: Ref<string> = ref('');
   const windowId = 'tempMeasurementWindowId';
 
   const editor = {
@@ -47,9 +48,10 @@ export default function setupMeasurementResultWindow(
     app,
     collectionComponent,
     {
-      editor: () => ({
-        ...editor,
-      }),
+      // XXX to be removed once headerTitile as Ref<string> is supported
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      editor: () => ({ ...editor }),
     },
   );
 
@@ -66,7 +68,7 @@ export default function setupMeasurementResultWindow(
         const layerListener = manager.currentLayer.value
           .getSource()
           .on('addfeature', ({ feature }) => {
-            manager.addMeasurement(feature);
+            manager.addMeasurement(feature!);
           });
         await importIntoLayer(files, app, manager.currentLayer.value);
         unByKey(layerListener);
@@ -78,7 +80,7 @@ export default function setupMeasurementResultWindow(
     );
   editorCollectionComponent.addActions([importAction, exportAction]);
 
-  function setHeader() {
+  function setHeader(): void {
     renameListener();
     const features = manager.currentFeatures.value;
     if (features.length > 1) {
@@ -94,7 +96,7 @@ export default function setupMeasurementResultWindow(
           }
         },
       );
-      renameListener = () => {
+      renameListener = (): void => {
         unByKey(propertyChangeListener);
       };
       headerTitle.value = features[0].get('title')
@@ -123,7 +125,9 @@ export default function setupMeasurementResultWindow(
     );
     if (
       currentSelectedIds.every((id) => currentFeatureIds.includes(id)) &&
-      currentFeatureIds.every((id) => currentSelectedIds.includes(id))
+      currentFeatureIds.every((id) =>
+        currentSelectedIds.includes(id!.toString()),
+      )
     ) {
       return;
     }
@@ -135,9 +139,12 @@ export default function setupMeasurementResultWindow(
     if (
       currentFeatureIds.length === 1 &&
       matchedSelection.length === 0 &&
-      manager.currentLayer.value.getFeatureById(currentFeatureIds[0])
+      manager.currentLayer.value.getFeatureById(currentFeatureIds[0]!)
     ) {
       app.windowManager.add(
+        // XXX to be removed once headerTitile as Ref<string> is supported
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         {
           ...editor,
           id: windowId,
@@ -157,7 +164,7 @@ export default function setupMeasurementResultWindow(
           !collectionComponent.items.value.find((i) => f.getId() === i.name) &&
           !manager.currentFeatures.value.includes(f)
         ) {
-          manager.currentLayer.value.removeFeaturesById([f.getId()]);
+          manager.currentLayer.value.removeFeaturesById([f.getId()!]);
         }
       });
     }
@@ -166,21 +173,26 @@ export default function setupMeasurementResultWindow(
   const selectionChangedListener = watch(collectionComponent.selection, () => {
     if (collectionComponent.selection.value.length !== 0) {
       if (manager.currentSession.value?.type !== SessionType.SELECT) {
-        manager.startSelectSession();
+        manager.startSelectSession([]);
       }
-      manager.currentSession.value.setCurrentFeatures(
+      // eslint-disable-next-line no-void
+      void (
+        manager.currentSession.value as SelectFeaturesSession
+      ).setCurrentFeatures(
         manager.currentLayer.value.getFeaturesById(
           collectionComponent.selection.value.map((s) => s.name),
         ),
       );
     } else {
-      manager.currentSession.value?.clearSelection?.();
+      (
+        manager.currentSession.value as SelectFeaturesSession
+      )?.clearSelection?.();
       manager.stopEditing();
     }
   });
 
   return {
-    destroy: () => {
+    destroy: (): void => {
       app.windowManager.remove(windowId);
       featuresChangedListener();
       selectionChangedListener();
