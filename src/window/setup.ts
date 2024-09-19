@@ -1,4 +1,4 @@
-import { watch, ref, Ref } from 'vue';
+import { watch } from 'vue';
 import { SelectFeaturesSession, SessionType } from '@vcmap/core';
 import {
   createListExportAction,
@@ -12,7 +12,6 @@ import {
 import { unByKey } from 'ol/Observable.js';
 import { SimpleMeasurementItem } from '../category/simpleCategory.js';
 import measurementWindow from './measurementWindow.vue';
-import { MeasurementTypeIcon } from '../util/toolbox.js';
 import { createExportCallback } from '../util/actionHelper.js';
 import { MeasurementManager } from '../measurementManager.js';
 import { name } from '../../package.json';
@@ -25,11 +24,7 @@ export default function setupMeasurementResultWindow(
   app: VcsUiApp,
   collectionComponent: CollectionComponentClass<SimpleMeasurementItem>,
 ): { destroy: () => void } {
-  let renameListener = (): void => {};
-  const headerTitle: Ref<string> = ref('');
-  const headerIcon: Ref<string> = ref('');
   const windowId = 'tempMeasurementWindowId';
-
   const editor = {
     component: measurementWindow,
     provides: {
@@ -37,8 +32,8 @@ export default function setupMeasurementResultWindow(
       manager,
     },
     state: {
-      headerTitle,
-      headerIcon,
+      headerTitle: 'measurement.header.title',
+      headerIcon: '',
       styles: { height: 'auto' },
       infoUrlCallback: app.getHelpUrlCallback('tools/measurementTool.html'),
     },
@@ -47,12 +42,7 @@ export default function setupMeasurementResultWindow(
   const editorCollectionComponent = makeEditorCollectionComponentClass(
     app,
     collectionComponent,
-    {
-      // XXX to be removed once headerTitile as Ref<string> is supported
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      editor: () => ({ ...editor }),
-    },
+    { editor: () => ({ ...editor }) },
   );
 
   const { action: exportAction, destroy: destroyExportAction } =
@@ -80,41 +70,10 @@ export default function setupMeasurementResultWindow(
     );
   editorCollectionComponent.addActions([importAction, exportAction]);
 
-  function setHeader(): void {
-    renameListener();
-    const features = manager.currentFeatures.value;
-    if (features.length > 1) {
-      headerTitle.value = `(${features.length}) Features`;
-    } else if (manager.currentSession.value?.type === SessionType.CREATE) {
-      headerTitle.value = 'measurement.header.title';
-    } else if (features.length) {
-      const propertyChangeListener = features[0].on(
-        'propertychange',
-        ({ key }) => {
-          if (key === 'title') {
-            headerTitle.value = features[0].get(key);
-          }
-        },
-      );
-      renameListener = (): void => {
-        unByKey(propertyChangeListener);
-      };
-      headerTitle.value = features[0].get('title')
-        ? features[0].get('title')
-        : 'measurement.header.title';
-    }
-    if (manager.currentMeasurementMode.value) {
-      headerIcon.value =
-        MeasurementTypeIcon[manager.currentMeasurementMode.value.type];
-    }
-  }
-
   const featuresChangedListener = watch(manager.currentFeatures, () => {
     if (app.windowManager.has(windowId)) {
       app.windowManager.remove(windowId);
     }
-
-    setHeader();
 
     // avoid cycle call
     const currentSelectedIds = collectionComponent.selection.value.map(
@@ -142,9 +101,6 @@ export default function setupMeasurementResultWindow(
       manager.currentLayer.value.getFeatureById(currentFeatureIds[0]!)
     ) {
       app.windowManager.add(
-        // XXX to be removed once headerTitile as Ref<string> is supported
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         {
           ...editor,
           id: windowId,

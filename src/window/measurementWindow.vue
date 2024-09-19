@@ -274,6 +274,8 @@
   } from 'vue';
   import { SelectFeaturesSession, SessionType } from '@vcmap/core';
   import Feature from 'ol/Feature.js';
+  import { unByKey } from 'ol/Observable.js';
+  import { MeasurementTypeIcon } from '../util/toolbox.js';
   import { MeasurementManager } from '../measurementManager.js';
   import MeasurementMode, {
     doNotEditAndPersistent,
@@ -296,7 +298,8 @@
       VImg,
     },
     setup(_, { attrs }) {
-      const windowId = (attrs['window-state'] as WindowState).id;
+      const windowState = attrs['window-state'] as WindowState;
+      const windowId = windowState.id;
       const app = inject('app') as VcsUiApp;
       const activeMapClassName = app.maps.activeMap?.className;
       const manager = inject('manager') as MeasurementManager;
@@ -360,6 +363,36 @@
         return usedHeaders;
       });
 
+      let renameListener = (): void => {};
+      function setHeader(): void {
+        renameListener();
+        const features = manager.currentFeatures.value;
+        if (features.length > 1) {
+          windowState.headerTitle = `(${features.length}) Features`;
+        } else if (manager.currentSession.value?.type === SessionType.CREATE) {
+          windowState.headerTitle = 'measurement.header.title';
+        } else if (features.length) {
+          const propertyChangeListener = features[0].on(
+            'propertychange',
+            ({ key }) => {
+              if (key === 'title') {
+                windowState.headerTitle = features[0].get(key);
+              }
+            },
+          );
+          renameListener = (): void => {
+            unByKey(propertyChangeListener);
+          };
+          windowState.headerTitle = features[0].get('title')
+            ? features[0].get('title')
+            : 'measurement.header.title';
+        }
+        if (manager.currentMeasurementMode.value) {
+          windowState.headerIcon =
+            MeasurementTypeIcon[manager.currentMeasurementMode.value.type];
+        }
+      }
+
       const sketchIcon = computed(() => {
         const theme = app.vuetify.theme.current.value.dark ? 'dark' : 'light';
         return getPluginAssetUrl(
@@ -372,6 +405,7 @@
       watch(
         manager.currentFeatures,
         () => {
+          setHeader();
           if (manager.currentFeatures.value.length > 0) {
             targetFeature.value = manager.currentFeatures.value[0];
             isPersistent.value = !!manager.category?.collection.hasKey(
@@ -412,6 +446,7 @@
       );
 
       onUnmounted(() => {
+        renameListener();
         if (!isPersistent.value) {
           (
             manager.currentSession.value as SelectFeaturesSession
