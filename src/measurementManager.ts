@@ -383,6 +383,9 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
         currentMeasurementMode.value
           .createTemplateFeature()
           .get('olcs_altitudeMode'),
+        {
+          hideSegmentLength: true,
+        },
       );
       createSessionListener = createSession.creationFinished.addEventListener(
         (newFeature) => {
@@ -423,7 +426,9 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
     },
     startEditSession(feature: Feature): void {
       setCurrentEditSession(
-        startEditGeometrySession(app, currentLayer.value, selectInteractionId),
+        startEditGeometrySession(app, currentLayer.value, selectInteractionId, {
+          hideSegmentLength: true,
+        }),
       );
       if (feature) {
         // set the feature at the selectFeatureSession
