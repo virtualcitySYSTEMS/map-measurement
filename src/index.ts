@@ -118,6 +118,7 @@ export default function measurementPlugin(
           edit: 'Edit measurement',
           select: 'Select measurements',
           category: {
+            title: 'Measurements',
             selectAll: 'Select all',
             hideSelected: 'Hide measurements',
             hideAll: 'Hide all',
@@ -135,7 +136,7 @@ export default function measurementPlugin(
               distance:
                 'Please notice that measurements only provide correct results if measured on the ground.',
               height:
-                'Please notice that measurements only provide correct results if the start point is on the ground.',
+                'Please notice that measurements only provide correct results if the start point is on the ground. Since the measurement depends on the local image coordinate system, it cannot be edited nor added to my workspace.',
             },
           },
         },
@@ -183,6 +184,7 @@ export default function measurementPlugin(
           edit: 'Messung editieren',
           select: 'Messungen',
           category: {
+            title: 'Messungen',
             selectAll: 'Alle selektieren',
             hideSelected: 'Selektierte Messungen ausblenden',
             hideAll: 'Alle ausblenden',
@@ -200,7 +202,7 @@ export default function measurementPlugin(
               distance:
                 'Bitte beachten Sie, dass Messungen nur dann korrekte Ergebnisse liefern, wenn sie auf dem Boden gemessen werden.',
               height:
-                'Bitte beachten Sie, dass Messungen nur korrekte Ergebnisse liefern, wenn der Startpunkt der Messung auf einen Bodenpunkt gesetzt wird.',
+                'Bitte beachten Sie, dass Messungen nur korrekte Ergebnisse liefern, wenn der Startpunkt der Messung auf einen Bodenpunkt gesetzt wird. Da die Messung vom lokalen Bildkoordinatensystem abhängt, kann sie weder bearbeitet noch zu meinem Arbeitsbereich hinzugefügt werden.',
             },
           },
         },

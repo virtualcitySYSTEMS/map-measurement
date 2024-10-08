@@ -276,7 +276,7 @@ export async function createCategory(
       {
         type: SimpleMeasurementCategory.className,
         name: 'Simple Measurement',
-        title: 'Measurements',
+        title: 'measurement.category.title',
         featureProperty: 'feature',
       },
       name,
