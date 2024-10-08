@@ -1,5 +1,5 @@
 import { VcsUiApp, VcsPlugin, WindowPosition } from '@vcmap/ui';
-import { moduleIdSymbol } from '@vcmap/core';
+import { getDefaultProjection, moduleIdSymbol } from '@vcmap/core';
 
 import { name, version, mapVersion } from '../package.json';
 import { addToolButtons } from './util/toolbox.js';
@@ -50,6 +50,19 @@ export default function measurementPlugin(
       const { categoryUiItem: collectionComponent, destroy: destroyCategory } =
         await createCategory(measurementManager, app);
 
+      const projectionListener = [
+        app.moduleAdded.addEventListener(() => {
+          measurementManager.currentMeasurementMode.value?.setProjection(
+            getDefaultProjection(),
+          );
+        }),
+        app.moduleRemoved.addEventListener(() => {
+          measurementManager.currentMeasurementMode.value?.setProjection(
+            getDefaultProjection(),
+          );
+        }),
+      ];
+
       const mapActivatedListener = app.maps.mapActivated.addEventListener(
         () => {
           const destroyButtons = addToolButtons(measurementManager, app);
@@ -64,6 +77,7 @@ export default function measurementPlugin(
 
           addContextMenu(app, measurementManager, this.name);
           destroy = (): void => {
+            projectionListener.forEach((cb) => cb());
             destroyButtons();
             destroyMeasurementWindow();
             destroyCategory();

@@ -9,6 +9,7 @@ import {
   originalFeatureSymbol,
   Projection,
   VcsMap,
+  wgs84Projection,
 } from '@vcmap/core';
 import { VcsUiApp } from '@vcmap/ui';
 import { ShallowRef, shallowRef } from 'vue';
@@ -93,7 +94,9 @@ export function isSupportedMeasurement(feature: Feature, map: VcsMap): boolean {
     [];
   return supportedMaps.includes(map.className);
 }
-
+function getDecimalPlacesForProjection(projection: Projection): number {
+  return projection.epsg === wgs84Projection.epsg ? 6 : 2;
+}
 type MeasurementModeOptions = {
   app: VcsUiApp;
   manager: MeasurementManager;
@@ -106,6 +109,8 @@ class MeasurementMode {
 
   projection: Projection;
 
+  crsDecimalPlaces: number;
+
   decimalPlaces: number;
 
   templateFeature: Feature;
@@ -116,6 +121,7 @@ class MeasurementMode {
     this.app = options.app;
     this.manager = options.manager;
     this.projection = getDefaultProjection();
+    this.crsDecimalPlaces = getDecimalPlacesForProjection(this.projection);
     this.decimalPlaces = 2;
     this.templateFeature = this.createTemplateFeature();
     this.values = shallowRef(this.defaultValues);
@@ -173,11 +179,7 @@ class MeasurementMode {
       return false;
     }
 
-    if (geometry.getCoordinates().length === 0) {
-      return false;
-    }
-
-    return true;
+    return geometry.getCoordinates().length !== 0;
   }
 
   calcMeasurementResult(feature: Feature): Promise<boolean> {
@@ -205,6 +207,13 @@ class MeasurementMode {
         width: 2,
       },
     });
+  }
+
+  setProjection(projection: Projection): void {
+    if (projection.epsg !== this.projection.epsg) {
+      this.projection = projection;
+      this.crsDecimalPlaces = getDecimalPlacesForProjection(projection);
+    }
   }
 }
 

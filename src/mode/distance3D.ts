@@ -47,8 +47,8 @@ class Distance3D extends MeasurementMode {
       positions.push({
         id: (positions.length + 1).toString(),
         name: undefined,
-        x: +coordinate[0].toFixed(this.decimalPlaces),
-        y: +coordinate[1].toFixed(this.decimalPlaces),
+        x: +coordinate[0].toFixed(this.crsDecimalPlaces),
+        y: +coordinate[1].toFixed(this.crsDecimalPlaces),
         z: +coordinate[2].toFixed(this.decimalPlaces),
       });
     }

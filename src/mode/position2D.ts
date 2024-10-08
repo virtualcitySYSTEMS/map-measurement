@@ -72,8 +72,8 @@ class Position2D extends MeasurementMode {
               {
                 id: '',
                 name: undefined,
-                x: +point[0].toFixed(this.decimalPlaces),
-                y: +point[1].toFixed(this.decimalPlaces),
+                x: +point[0].toFixed(this.crsDecimalPlaces),
+                y: +point[1].toFixed(this.crsDecimalPlaces),
                 z: +point[2].toFixed(this.decimalPlaces),
               },
             ],
@@ -93,8 +93,8 @@ class Position2D extends MeasurementMode {
             {
               id: '',
               name: undefined,
-              x: +point[0].toFixed(this.decimalPlaces),
-              y: +point[1].toFixed(this.decimalPlaces),
+              x: +point[0].toFixed(this.crsDecimalPlaces),
+              y: +point[1].toFixed(this.crsDecimalPlaces),
               z:
                 geometry.getLayout() === 'XY'
                   ? undefined
