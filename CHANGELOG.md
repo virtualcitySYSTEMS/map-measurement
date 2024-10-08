@@ -1,7 +1,8 @@
 # v2.0.0
 
-- Updates @vcmap/core and @vcmap/ui to verison 6.0
+- Updates @vcmap/core and @vcmap/ui to version 6.0
 - Fixes 3D Height sketch theme to match dark mode
+- Fixes Issue with negative Values
 
 # v1.0.8
 

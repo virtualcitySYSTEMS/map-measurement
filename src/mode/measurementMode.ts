@@ -160,7 +160,10 @@ class MeasurementMode {
       abs /= cutoff;
       unit = `k${unit}`;
     }
-    return `${abs.toFixed(this.decimalPlaces)} ${unit}`;
+
+    const formattedValue =
+      (value < 0 ? '-' : '') + abs.toFixed(this.decimalPlaces);
+    return `${formattedValue} ${unit}`;
   }
 
   // eslint-disable-next-line class-methods-use-this
