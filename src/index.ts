@@ -150,7 +150,7 @@ export default function measurementPlugin(
               distance:
                 'Please notice that measurements only provide correct results if measured on the ground.',
               height:
-                'Please notice that measurements only provide correct results if the start point is on the ground. Since the measurement depends on the local image coordinate system, it cannot be edited nor added to my workspace.',
+                'Please notice that measurements only provide correct results if the start point is on the ground. Since the measurement depends on the local image coordinate system, it cannot be edited nor added to My Workspace.',
             },
           },
         },
