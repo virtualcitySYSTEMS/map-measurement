@@ -92,7 +92,7 @@ export default function measurementPlugin(
       en: {
         measurement: {
           header: {
-            title: 'Measurement',
+            title: 'Temporary measurement',
           },
           create: {
             new: 'New',
@@ -158,7 +158,7 @@ export default function measurementPlugin(
       de: {
         measurement: {
           header: {
-            title: 'Messen',
+            title: 'Temporäre Messung',
           },
           create: {
             new: 'Neu',
