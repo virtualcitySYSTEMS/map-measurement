@@ -308,7 +308,7 @@ export async function createCategory(
         if (manager.currentFeatures.value) {
           (
             manager.currentSession.value as SelectFeaturesSession
-          ).clearSelection?.();
+          )?.clearSelection?.();
         }
         this.icon = '$vcsCheckbox';
       } else {

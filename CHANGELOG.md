@@ -1,3 +1,7 @@
+# v2.0.1
+
+- Fixes bug where disabling Measurements category in MyWorkspace throws an error
+
 # v2.0.0
 
 - Updates @vcmap/core and @vcmap/ui to version 6.0
