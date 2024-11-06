@@ -65,6 +65,9 @@ function createSimpleMeasurementLayer(app: VcsUiApp): VectorLayer {
   const layer = new VectorLayer({
     projection: mercatorProjection.toJSON(),
     zIndex: maxZIndex - 1,
+    vectorProperties: {
+      eyeOffset: [0.0, 0.0, -5.0],
+    },
   });
   markVolatile(layer);
   layer.activate().catch(() => {});

@@ -1,3 +1,7 @@
+# v2.0.2
+
+- Fix measurement billboard labels introducing an eye offset
+
 # v2.0.1
 
 - Fixes bug where disabling Measurements category in MyWorkspace throws an error
