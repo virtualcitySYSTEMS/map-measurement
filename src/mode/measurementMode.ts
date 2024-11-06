@@ -197,7 +197,7 @@ class MeasurementMode {
     return getTextFromOptions({
       font: 'bold 18px Arial',
       textBaseline: 'bottom',
-      offsetY: 0,
+      offsetY: -20,
       offsetX: 0,
       fill: {
         color: [3, 9, 53, 1],

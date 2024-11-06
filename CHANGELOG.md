@@ -1,6 +1,7 @@
 # v2.0.2
 
 - Fix measurement billboard labels introducing an eye offset
+- Added an offset to the labels so distance measurement does not selfpick the label
 
 # v2.0.1
 
