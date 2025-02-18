@@ -21,6 +21,7 @@ import {
 import { VcsUiApp } from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
 import Feature from 'ol/Feature.js';
+import { EventsKey } from 'ol/events';
 import Distance2D from './mode/distance2D.js';
 import Position3D from './mode/position3D.js';
 import Area2D from './mode/area2D.js';
@@ -61,7 +62,10 @@ export type MeasurementManager = {
 
 export const selectInteractionId = 'select_interaction_id';
 
-function createSimpleMeasurementLayer(app: VcsUiApp): VectorLayer {
+function createSimpleMeasurementLayer(app: VcsUiApp): {
+  layer: VectorLayer;
+  destroy: () => void;
+} {
   const layer = new VectorLayer({
     projection: mercatorProjection.toJSON(),
     zIndex: maxZIndex - 1,
@@ -72,7 +76,32 @@ function createSimpleMeasurementLayer(app: VcsUiApp): VectorLayer {
   markVolatile(layer);
   layer.activate().catch(() => {});
   app.layers.add(layer);
-  return layer;
+
+  const listeners = [
+    layer.getSource().on('addfeature', (event) => {
+      if (event.feature) {
+        app.maps.eventHandler.featureInteraction.excludeFromPickPosition(
+          event.feature,
+        );
+      }
+    }),
+    layer.getSource().on('removefeature', (event) => {
+      if (event.feature) {
+        app.maps.eventHandler.featureInteraction.includeInPickPosition(
+          event.feature,
+        );
+      }
+    }),
+  ];
+
+  const destroy = (): void => {
+    unByKey(listeners);
+    layer.deactivate();
+    app.layers.remove(layer);
+    layer.destroy();
+  };
+
+  return { layer, destroy };
 }
 
 export function createMeasurementMode(
@@ -102,7 +131,7 @@ export function createMeasurementMode(
 
 function addNewFeature(
   measurementMode: MeasurementMode,
-  featureListeners: object,
+  featureListeners: Record<string | number, EventsKey>,
   newFeature: Feature,
 ): void {
   const properties = measurementMode.templateFeature.getProperties();
@@ -116,10 +145,9 @@ function addNewFeature(
     newFeature[doNotTransform] = true;
     newFeature[doNotEditAndPersistent] = true;
   }
-  // eslint-disable-next-line
-  // @ts-ignore
+
   featureListeners[newFeature.getId()!] = newFeature
-    .getGeometry()
+    .getGeometry()!
     .on('change', (): void => {
       // eslint-disable-next-line no-void
       void measurementMode.calcMeasurementResult(newFeature).then((updated) => {
@@ -134,7 +162,7 @@ function setupSessionListener(
   currentFeatures: ShallowRef<Array<Feature>>,
   _layer: VectorLayer,
   currentMeasurementMode: ShallowRef<MeasurementMode>,
-  featureListeners: object,
+  featureListeners: Record<string | number, EventsKey>,
 ): () => void {
   const listeners: Array<() => void> = [];
   if (session.type === SessionType.SELECT) {
@@ -215,7 +243,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
 
   let category: SimpleMeasurementCategory | undefined;
 
-  const layer = createSimpleMeasurementLayer(app);
+  const { layer, destroy: destroyLayer } = createSimpleMeasurementLayer(app);
 
   const highlightStyle = new VectorStyleItem({});
   highlightStyle.style = getMeasurementStyleFunction(true);
@@ -229,7 +257,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
   let sessionStoppedListener = (): void => {};
   let editSessionStoppedListener = (): void => {};
 
-  const featureListeners = {};
+  const featureListeners: Record<string | number, EventsKey> = {};
 
   let obliqueMapImageChangedListener: () => void;
   function setupMapChangedListener(): () => void {
@@ -342,13 +370,9 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
 
   const layerListener = currentLayer.value.source.on('removefeature', (e) => {
     const id = e.feature!.getId()!;
-    // eslint-disable-next-line
-    // @ts-ignore
     const featureListener = featureListeners[id];
     if (featureListener) {
       unByKey(featureListener);
-      // eslint-disable-next-line
-      // @ts-ignore
       delete featureListeners[id];
     }
   });
@@ -486,8 +510,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
       setCurrentSession();
       layerWatcher();
       unByKey(layerListener);
-      app.layers.remove(layer);
-      layer.destroy();
+      destroyLayer();
       obliqueMapImageChangedListener?.();
       mapChangedListener();
     },

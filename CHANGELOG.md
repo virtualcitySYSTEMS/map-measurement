@@ -1,3 +1,8 @@
+# v3.0.0
+
+- update to @vcmap/ui 6.1 & @vcmap/core 6.1
+- fixes a bug where the label would be picked when measuring.
+
 # v2.0.2
 
 - Fix measurement billboard labels introducing an eye offset
