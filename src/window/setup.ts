@@ -1,19 +1,19 @@
 import { watch } from 'vue';
-import { SelectFeaturesSession, SessionType } from '@vcmap/core';
+import type { SelectFeaturesSession } from '@vcmap/core';
+import { SessionType } from '@vcmap/core';
+import type { VcsUiApp, CollectionComponentClass } from '@vcmap/ui';
 import {
   createListExportAction,
   createListImportAction,
   importIntoLayer,
   makeEditorCollectionComponentClass,
-  VcsUiApp,
   WindowSlot,
-  CollectionComponentClass,
 } from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
-import { SimpleMeasurementItem } from '../category/simpleCategory.js';
+import type { SimpleMeasurementItem } from '../category/simpleCategory.js';
 import measurementWindow from './measurementWindow.vue';
 import { createExportCallback } from '../util/actionHelper.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { MeasurementManager } from '../measurementManager.js';
 import { name } from '../../package.json';
 
 /**
@@ -48,7 +48,9 @@ export default function setupMeasurementResultWindow(
   const { action: exportAction, destroy: destroyExportAction } =
     createListExportAction(
       collectionComponent.selection,
-      () => createExportCallback(manager, collectionComponent),
+      () => {
+        createExportCallback(manager, collectionComponent);
+      },
       name,
     );
 

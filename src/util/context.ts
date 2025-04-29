@@ -1,7 +1,8 @@
-import { SelectFeaturesSession, SessionType, vcsLayerName } from '@vcmap/core';
-import { VcsUiApp } from '@vcmap/ui';
-import Feature from 'ol/Feature.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { SelectFeaturesSession } from '@vcmap/core';
+import { SessionType, vcsLayerName } from '@vcmap/core';
+import type { VcsUiApp } from '@vcmap/ui';
+import type Feature from 'ol/Feature.js';
+import type { MeasurementManager } from '../measurementManager.js';
 import {
   createDeleteSelectedAction,
   createHideSelectedAction,

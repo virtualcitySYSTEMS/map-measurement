@@ -1,17 +1,13 @@
 import { reactive, watch } from 'vue';
-import { GeometryType, SessionType } from '@vcmap/core';
-import {
-  SelectToolboxComponentOptions,
-  ToolboxType,
-  VcsUiApp,
-} from '@vcmap/ui';
+import type { GeometryType } from '@vcmap/core';
+import { SessionType } from '@vcmap/core';
+import type { SelectToolboxComponentOptions, VcsUiApp } from '@vcmap/ui';
+import { ToolboxType } from '@vcmap/ui';
 import { name } from '../../package.json';
+import type { MeasurementManager } from '../measurementManager.js';
+import { createMeasurementMode } from '../measurementManager.js';
 import {
-  createMeasurementMode,
-  MeasurementManager,
-} from '../measurementManager.js';
-import {
-  MeasurementGeometryType,
+  measurementGeometryType,
   MeasurementType,
 } from '../mode/measurementMode.js';
 
@@ -27,7 +23,7 @@ type MeasurementToolButton = {
   geometryType: GeometryType;
 };
 
-export const MeasurementTypeIcon = {
+export const measurementTypeIcon = {
   [MeasurementType.Position3D]: '$vcs3dPoint',
   [MeasurementType.Position2D]: '$vcs2dPoint',
   [MeasurementType.Distance2D]: '$vcs2dDistance',
@@ -44,8 +40,8 @@ function createCreateToolbox(manager: MeasurementManager): MeasurementToolbox {
   ): MeasurementToolButton => ({
     name: measurementType,
     title: `measurement.create.tooltip.${measurementType}`,
-    icon: MeasurementTypeIcon[measurementType],
-    geometryType: MeasurementGeometryType[measurementType],
+    icon: measurementTypeIcon[measurementType],
+    geometryType: measurementGeometryType[measurementType],
   });
 
   const toolbox: SelectToolboxComponentOptions = {
@@ -90,7 +86,7 @@ function createCreateToolbox(manager: MeasurementManager): MeasurementToolbox {
       ) {
         const toolName = manager.currentMeasurementMode.value!.type;
         const index = toolbox.action.tools.findIndex(
-          (t) => t.name === toolName,
+          (t) => (t.name as MeasurementType) === toolName,
         );
         if (index >= 0 && toolbox.action.currentIndex !== index) {
           toolbox.action.currentIndex = index;
@@ -133,7 +129,7 @@ export function addToolButtons(
     const { currentIndex } = createToolbox.action;
     if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
       createToolbox.action.currentIndex = createToolbox.action.tools.findIndex(
-        (tool) => tool.name === MeasurementType.Distance2D,
+        (tool) => (tool.name as MeasurementType) === MeasurementType.Distance2D,
       );
     }
 

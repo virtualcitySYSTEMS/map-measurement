@@ -10,8 +10,9 @@ import {
   transformFromImage,
   wgs84Projection,
 } from '@vcmap/core';
-import Feature from 'ol/Feature.js';
-import { Geometry, Point } from 'ol/geom.js';
+import type Feature from 'ol/Feature.js';
+import type { Geometry } from 'ol/geom.js';
+import { Point } from 'ol/geom.js';
 import MeasurementMode, { MeasurementType } from './measurementMode.js';
 
 class Position2D extends MeasurementMode {

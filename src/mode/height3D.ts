@@ -1,15 +1,17 @@
+import type { CreateFeatureSession } from '@vcmap/core';
 import {
   CesiumMap,
-  CreateFeatureSession,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
   Projection,
+  SessionType,
 } from '@vcmap/core';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
-import { Geometry, LineString, Point } from 'ol/geom.js';
-import { Coordinate } from 'ol/coordinate.js';
-import Feature from 'ol/Feature.js';
+import type { Geometry } from 'ol/geom.js';
+import { LineString, Point } from 'ol/geom.js';
+import type { Coordinate } from 'ol/coordinate.js';
+import type Feature from 'ol/Feature.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
   getValues,
@@ -47,7 +49,7 @@ class Height3D extends MeasurementMode {
 
     if (
       coords.length === 3 &&
-      this.manager.currentSession.value?.type === 'create'
+      this.manager.currentSession.value?.type === SessionType.CREATE
     ) {
       (
         this.manager.currentSession
@@ -79,7 +81,7 @@ class Height3D extends MeasurementMode {
         );
       }
 
-      const scratchValues: { [key: string]: number } = {
+      const scratchValues: Record<string, number> = {
         horizontal: 0,
         height: 0,
         distance: 0,

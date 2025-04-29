@@ -1,14 +1,16 @@
-import {
+import type {
   GeoJSONwriteOptions,
   SelectFeaturesSession,
   VectorLayer,
-  writeGeoJSON,
 } from '@vcmap/core';
-import { CollectionComponentClass, downloadText, VcsAction } from '@vcmap/ui';
-import { watch, WatchStopHandle } from 'vue';
-import Feature from 'ol/Feature';
-import { MeasurementManager } from '../measurementManager.js';
-import { SimpleMeasurementItem } from '../category/simpleCategory.js';
+import { writeGeoJSON } from '@vcmap/core';
+import type { CollectionComponentClass, VcsAction } from '@vcmap/ui';
+import { downloadText } from '@vcmap/ui';
+import type { WatchStopHandle } from 'vue';
+import { watch } from 'vue';
+import type Feature from 'ol/Feature';
+import type { MeasurementManager } from '../measurementManager.js';
+import type { SimpleMeasurementItem } from '../category/simpleCategory.js';
 
 /**
  * @param manager The measurement manager

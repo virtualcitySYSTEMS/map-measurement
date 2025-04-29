@@ -7,8 +7,9 @@ import {
   OpenlayersMap,
   Projection,
 } from '@vcmap/core';
-import Feature from 'ol/Feature.js';
-import { Polygon, Geometry } from 'ol/geom.js';
+import type Feature from 'ol/Feature.js';
+import type { Geometry } from 'ol/geom.js';
+import { Polygon } from 'ol/geom.js';
 import {
   getDistance as haversineDistance,
   getArea as geodesicArea,

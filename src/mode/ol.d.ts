@@ -1,12 +1,12 @@
-import {
+import type {
   doNotEditAndPersistent,
   measurementModeSymbol,
-  MeasurementGeometryType,
+  measurementGeometryType,
 } from './measurementMode.js';
 
 declare module 'ol' {
   interface Feature {
-    [measurementModeSymbol]?: MeasurementGeometryType;
+    [measurementModeSymbol]?: measurementGeometryType;
     [doNotEditAndPersistent]?: boolean;
   }
 }

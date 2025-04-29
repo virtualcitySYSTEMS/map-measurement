@@ -1,4 +1,4 @@
-import { VcsUiApp, VcsPlugin, WindowPosition } from '@vcmap/ui';
+import type { VcsUiApp, VcsPlugin, WindowPosition } from '@vcmap/ui';
 import { getDefaultProjection, moduleIdSymbol } from '@vcmap/core';
 
 import { name, version, mapVersion } from '../package.json';
@@ -77,7 +77,9 @@ export default function measurementPlugin(
 
           addContextMenu(app, measurementManager, this.name);
           destroy = (): void => {
-            projectionListener.forEach((cb) => cb());
+            projectionListener.forEach((cb) => {
+              cb();
+            });
             destroyButtons();
             destroyMeasurementWindow();
             destroyCategory();

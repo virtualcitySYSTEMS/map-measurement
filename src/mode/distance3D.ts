@@ -7,7 +7,7 @@ import {
 } from '@vcmap/core';
 import { Cartesian3 } from '@vcmap-cesium/engine';
 import { LineString } from 'ol/geom';
-import Feature from 'ol/Feature.js';
+import type Feature from 'ol/Feature.js';
 import MeasurementMode, { MeasurementType } from './measurementMode.js';
 
 let startCartesian: Cartesian3 = new Cartesian3();
@@ -54,7 +54,7 @@ class Distance3D extends MeasurementMode {
     }
 
     let distance = 0;
-    const segmentDistance = new Array(coords.length - 1);
+    const segmentDistance = new Array<number>(coords.length - 1);
     Projection.mercatorToWgs84(coords[0], true);
     startCartesian = Cartesian3.fromDegrees(
       coords[0][0],

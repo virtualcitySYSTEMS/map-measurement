@@ -23,6 +23,7 @@ build:
   <<: *job_definition
   script:
     - npm ci
+    - npm run ensure-types
   before_script:
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
@@ -49,7 +50,6 @@ lint:
   <<: *after_build_definition
   stage: test
   script:
-    - npx vcmplugin ensure-types
     - npm run lint
 
 type-check:
@@ -57,6 +57,16 @@ type-check:
   stage: test
   script:
     - npm run type-check
+
+test:
+  <<: *after_build_definition
+  stage: test
+  script:
+    - npm run coverage -- --reporter junit --outputFile test-report.xml
+  coverage: '/^Statements\s*:\s*([^%]+)/'
+  artifacts:
+    reports:
+      junit: test-report.xml
 
 audit:
   <<: *after_build_definition

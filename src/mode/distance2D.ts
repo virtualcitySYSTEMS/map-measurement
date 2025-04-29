@@ -12,13 +12,14 @@ import {
   OpenlayersMap,
   alreadyTransformedToImage,
 } from '@vcmap/core';
-import { VcsUiApp } from '@vcmap/ui';
-import Feature from 'ol/Feature.js';
-import { Coordinate } from 'ol/coordinate.js';
+import type { VcsUiApp } from '@vcmap/ui';
+import type Feature from 'ol/Feature.js';
+import type { Coordinate } from 'ol/coordinate.js';
 import { getDistance as haversineDistance } from 'ol/sphere.js';
-import { LineString, Geometry, Point } from 'ol/geom.js';
+import type { Geometry } from 'ol/geom.js';
+import { LineString, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { MeasurementManager } from '../measurementManager.js';
 import MeasurementMode, {
   getValues,
   MeasurementType,
@@ -144,7 +145,7 @@ class Distance2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
   calculateDistance(coordinates: Coordinate[]): number {
     const coordsLength = coordinates.length;
-    const segmentDistance = new Array(coordsLength - 1);
+    const segmentDistance = new Array<number>(coordsLength - 1);
     let distance = 0;
     for (let i = 1; i < coordsLength; i++) {
       segmentDistance[i - 1] = haversineDistance(

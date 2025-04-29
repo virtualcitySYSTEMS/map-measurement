@@ -1,4 +1,8 @@
-// eslint-disable-next-line max-classes-per-file
+import type {
+  VectorLayer,
+  VcsObjectOptions,
+  SelectFeaturesSession,
+} from '@vcmap/core';
 import {
   Category,
   writeGeoJSONFeature,
@@ -7,11 +11,8 @@ import {
   mercatorProjection,
   Extent,
   FeatureVisibilityAction,
-  VectorLayer,
-  VcsObjectOptions,
-  SelectFeaturesSession,
 } from '@vcmap/core';
-import {
+import type {
   CollectionComponentClass,
   CollectionComponentListItem,
   VcsUiApp,
@@ -20,13 +21,11 @@ import { reactive } from 'vue';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable.js';
 import { isEmpty } from 'ol/extent.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { MeasurementManager } from '../measurementManager.js';
 import { name } from '../../package.json';
 import { createDeleteSelectedAction } from '../util/actionHelper.js';
-import {
-  measurementModeSymbol,
-  MeasurementType,
-} from '../mode/measurementMode.js';
+import type { MeasurementType } from '../mode/measurementMode.js';
+import { measurementModeSymbol } from '../mode/measurementMode.js';
 
 export type SimpleMeasurementItem = VcsObjectOptions & {
   id: string;
@@ -66,7 +65,7 @@ class SimpleMeasurementCategory extends Category<SimpleMeasurementItem> {
 
   protected _layer: VectorLayer | null;
 
-  _layerListeners: () => void;
+  private _layerListeners: () => void;
 
   constructor(options: VcsObjectOptions) {
     super(options);
@@ -118,7 +117,7 @@ class SimpleMeasurementCategory extends Category<SimpleMeasurementItem> {
     super.mergeOptions(options);
   }
 
-  _itemAdded(item: SimpleMeasurementItem): void {
+  protected _itemAdded(item: SimpleMeasurementItem): void {
     // Is needed because in core the feature first gets removed, which triggers the source listener above and ends in an event trigger cicle that does not stop.
     // If in core intead of removing, just checking if it is already existing AND set item.name as features id ->>> no need to override original function
     if (!this._layer?.getFeatureById(item.name)) {
@@ -132,14 +131,14 @@ class SimpleMeasurementCategory extends Category<SimpleMeasurementItem> {
     }
   }
 
-  _itemRemoved(item: SimpleMeasurementItem): void {
+  protected _itemRemoved(item: SimpleMeasurementItem): void {
     if (this._layer?.getFeatureById(item.name)) {
       this._layer.removeFeaturesById([item.name]);
     }
   }
 
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/require-await
-  _deserializeItem(
+  // eslint-disable-next-line class-methods-use-this
+  protected _deserializeItem(
     item: SimpleMeasurementItem,
   ): Promise<SimpleMeasurementItem> {
     const { features } = parseGeoJSON(item.feature);
@@ -151,7 +150,7 @@ class SimpleMeasurementCategory extends Category<SimpleMeasurementItem> {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  _serializeItem(item: SimpleMeasurementItem): SimpleMeasurementItem {
+  protected _serializeItem(item: SimpleMeasurementItem): SimpleMeasurementItem {
     return {
       id: item.id,
       name: item.name,

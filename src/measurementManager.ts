@@ -1,4 +1,12 @@
-import { watch, shallowRef, ShallowRef } from 'vue';
+import type { ShallowRef } from 'vue';
+import { watch, shallowRef } from 'vue';
+import type {
+  EditorSession,
+  SelectFeaturesSession,
+  EditFeaturesSession,
+  EditGeometrySession,
+  CreateFeatureSession,
+} from '@vcmap/core';
 import {
   SelectionMode,
   startCreateFeatureSession,
@@ -12,25 +20,21 @@ import {
   VectorStyleItem,
   ObliqueMap,
   doNotTransform,
-  EditorSession,
-  SelectFeaturesSession,
-  EditFeaturesSession,
-  EditGeometrySession,
-  CreateFeatureSession,
 } from '@vcmap/core';
-import { VcsUiApp } from '@vcmap/ui';
+import type { VcsUiApp } from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
-import Feature from 'ol/Feature.js';
-import { EventsKey } from 'ol/events';
+import type Feature from 'ol/Feature.js';
+import type { EventsKey } from 'ol/events';
 import Distance2D from './mode/distance2D.js';
 import Position3D from './mode/position3D.js';
 import Area2D from './mode/area2D.js';
 import Distance3D from './mode/distance3D.js';
 import ObliqueHeight from './mode/obliqueHeight.js';
 import Area3D from './mode/area3D.js';
-import MeasurementMode, {
+import type MeasurementMode from './mode/measurementMode.js';
+import type { measurementGeometryType } from './mode/measurementMode.js';
+import {
   doNotEditAndPersistent,
-  MeasurementGeometryType,
   measurementModeSymbol,
   MeasurementType,
   measurementTypeProperty,
@@ -38,12 +42,12 @@ import MeasurementMode, {
 import Height3D from './mode/height3D.js';
 import getMeasurementStyleFunction from './mode/styleHelper.js';
 import Position2D from './mode/position2D.js';
-import SimpleMeasurementCategory from './category/simpleCategory.js';
+import type SimpleMeasurementCategory from './category/simpleCategory.js';
 
 export type MeasurementManager = {
   category: SimpleMeasurementCategory | undefined;
   currentMeasurementMode: ShallowRef<MeasurementMode | undefined>;
-  currentSession: ShallowRef<EditorSession<SessionType> | undefined>;
+  currentSession: ShallowRef<EditorSession | undefined>;
   currentEditSession: ShallowRef<
     | EditorSession<SessionType.EDIT_FEATURES | SessionType.EDIT_GEOMETRY>
     | undefined
@@ -158,7 +162,7 @@ function addNewFeature(
 
 function setupSessionListener(
   _app: VcsUiApp,
-  session: EditorSession<SessionType>,
+  session: EditorSession,
   currentFeatures: ShallowRef<Array<Feature>>,
   _layer: VectorLayer,
   currentMeasurementMode: ShallowRef<MeasurementMode>,
@@ -182,11 +186,11 @@ function setupSessionListener(
   }
 
   if (session.type === SessionType.CREATE) {
-    const sessionType =
-      MeasurementGeometryType[currentMeasurementMode.value.type];
     listeners.push(
       (
-        session as CreateFeatureSession<typeof sessionType>
+        session as CreateFeatureSession<
+          (typeof measurementGeometryType)[typeof currentMeasurementMode.value.type]
+        >
       ).featureCreated.addEventListener((newFeature) => {
         currentFeatures.value = [newFeature];
         addNewFeature(
@@ -201,7 +205,9 @@ function setupSessionListener(
   }
 
   return () => {
-    listeners.forEach((l) => l());
+    listeners.forEach((l) => {
+      l();
+    });
   };
 }
 
@@ -220,9 +226,9 @@ function setupEditSessionListeners(
   };
   const featuresChangesListener =
     selectSession.featuresChanged.addEventListener(updateFeatures);
-  const stopListener = selectSession.stopped.addEventListener(() =>
-    editSession.stop(),
-  );
+  const stopListener = selectSession.stopped.addEventListener(() => {
+    editSession.stop();
+  });
 
   return () => {
     featuresChangesListener();
@@ -231,8 +237,7 @@ function setupEditSessionListeners(
 }
 
 export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
-  const currentSession: ShallowRef<EditorSession<SessionType> | undefined> =
-    shallowRef();
+  const currentSession: ShallowRef<EditorSession | undefined> = shallowRef();
   const currentEditSession: ShallowRef<
     | EditorSession<SessionType.EDIT_FEATURES | SessionType.EDIT_GEOMETRY>
     | undefined
@@ -261,7 +266,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
 
   let obliqueMapImageChangedListener: () => void;
   function setupMapChangedListener(): () => void {
-    const deleteOblique2DHeightFeature = (): void | (() => void) =>
+    const deleteOblique2DHeightFeature = (): void => {
       layer.removeFeaturesById(
         layer
           .getFeatures()
@@ -272,6 +277,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
           )
           .map((f) => f.getId()!),
       );
+    };
 
     return app.maps.mapActivated?.addEventListener(() => {
       deleteOblique2DHeightFeature();
@@ -290,7 +296,7 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
    * Stops running sessions and starts a new one.
    * @param  newSession The new editor session to be started.
    */
-  function setCurrentSession(newSession?: EditorSession<SessionType>): void {
+  function setCurrentSession(newSession?: EditorSession): void {
     sessionStoppedListener();
     sessionListener();
 
@@ -302,7 +308,9 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
     currentSession.value = newSession;
     if (currentSession.value) {
       sessionStoppedListener = currentSession.value.stopped.addEventListener(
-        () => setCurrentSession(),
+        () => {
+          setCurrentSession();
+        },
       );
 
       sessionListener = setupSessionListener(
@@ -348,9 +356,9 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
         (currentSession.value as SelectFeaturesSession).setMode(selectionMode);
       }
       editSessionStoppedListener =
-        currentEditSession.value!.stopped.addEventListener(() =>
-          setCurrentEditSession(),
-        );
+        currentEditSession.value!.stopped.addEventListener(() => {
+          setCurrentEditSession();
+        });
       editSessionListener = setupEditSessionListeners(
         currentSession.value as SelectFeaturesSession,
         currentEditSession.value as EditFeaturesSession | EditGeometrySession,
@@ -425,7 +433,6 @@ export function createMeasurementManager(app: VcsUiApp): MeasurementManager {
 
             setTimeout(() => {
               if (!stopped) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
                 this.startSelectSession([newFeature]);
               }
             }, 0);

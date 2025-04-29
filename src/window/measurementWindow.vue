@@ -6,14 +6,14 @@
     >
       <!--point measurement block-->
       <VcsDataTable
-        :items="values.vertexPositions"
-        item-key="id"
-        :headers="headers"
-        :show-searchbar="false"
         v-if="
           values.type === MeasurementType.Position3D ||
           values.type === MeasurementType.Position2D
         "
+        :items="values.vertexPositions"
+        item-key="id"
+        :headers="headers"
+        :show-searchbar="false"
       >
       </VcsDataTable>
       <!--distance measurement block-->
@@ -94,16 +94,16 @@
       <!--oblique measurement hint-->
       <div v-if="activeMapClassName === 'ObliqueMap'">
         <v-row
+          v-if="values.type === MeasurementType.Distance2D"
           no-gutters
           class="py-2 px-2"
-          v-if="values.type === MeasurementType.Distance2D"
         >
           {{ $t('measurement.hint.oblique.distance') }}
         </v-row>
         <v-row
+          v-if="values.type === MeasurementType.ObliqueHeight2D"
           no-gutters
           class="py-2 px-2"
-          v-if="values.type === MeasurementType.ObliqueHeight2D"
         >
           {{ $t('measurement.hint.oblique.height') }}
         </v-row>
@@ -182,7 +182,7 @@
             />
           </v-col>
         </v-row>
-        <VcsFormSection :expandable="true" heading="Sketch" v-if="sketchIcon">
+        <VcsFormSection v-if="sketchIcon" :expandable="true" heading="Sketch">
           <v-img :src="sketchIcon" alt="plugin-icon" />
         </VcsFormSection>
         <v-row no-gutters class="py-0 px-1">
@@ -216,11 +216,11 @@
       </div>
     </VcsFormSection>
     <VcsFormSection
-      :heading="`measurement.value.points`"
       v-if="
         values.type === MeasurementType.Distance2D ||
         values.type === MeasurementType.Distance3D
       "
+      :heading="`measurement.value.points`"
     >
       <VcsDataTable
         :items="values.vertexPositions"
@@ -232,15 +232,15 @@
     </VcsFormSection>
     <div class="d-flex w-full justify-space-between px-2 pt-2 pb-1">
       <VcsFormButton
-        @click="addToCategory"
         icon="$vcsComponentsPlus"
         :disabled="isPersistent || isInCreation || !isEditable"
         :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
+        @click="addToCategory"
       />
       <VcsFormButton
-        @click="createNewMeasurement"
         variant="filled"
         :disabled="!isMapSupported"
+        @click="createNewMeasurement"
       >
         {{ $t('measurement.create.new') }}
       </VcsFormButton>
@@ -249,6 +249,7 @@
 </template>
 
 <script lang="ts">
+  import type { VcsUiApp, VcsAction, WindowState } from '@vcmap/ui';
   import {
     VcsDataTable,
     VcsFormSection,
@@ -256,11 +257,9 @@
     VcsActionButtonList,
     VcsFormButton,
     getPluginAssetUrl,
-    VcsUiApp,
-    VcsAction,
-    WindowState,
   } from '@vcmap/ui';
   import { VRow, VCol, VSheet, VImg } from 'vuetify/components';
+  import type { Ref, ShallowRef } from 'vue';
   import {
     inject,
     ref,
@@ -269,15 +268,15 @@
     onUnmounted,
     shallowRef,
     defineComponent,
-    Ref,
-    ShallowRef,
   } from 'vue';
-  import { SelectFeaturesSession, SessionType } from '@vcmap/core';
-  import Feature from 'ol/Feature.js';
+  import type { SelectFeaturesSession } from '@vcmap/core';
+  import { SessionType } from '@vcmap/core';
+  import type Feature from 'ol/Feature.js';
   import { unByKey } from 'ol/Observable.js';
-  import { MeasurementTypeIcon } from '../util/toolbox.js';
-  import { MeasurementManager } from '../measurementManager.js';
-  import MeasurementMode, {
+  import { measurementTypeIcon } from '../util/toolbox.js';
+  import type { MeasurementManager } from '../measurementManager.js';
+  import type MeasurementMode from '../mode/measurementMode.js';
+  import {
     doNotEditAndPersistent,
     measurementModeSymbol,
     MeasurementType,
@@ -389,7 +388,7 @@
         }
         if (manager.currentMeasurementMode.value) {
           windowState.headerIcon =
-            MeasurementTypeIcon[manager.currentMeasurementMode.value.type];
+            measurementTypeIcon[manager.currentMeasurementMode.value.type];
         }
       }
 
@@ -487,6 +486,7 @@
                 input.innerHTML = value;
                 document.body.appendChild(input);
                 input.select();
+                // eslint-disable-next-line @typescript-eslint/no-deprecated
                 document.execCommand('copy');
                 document.body.removeChild(input);
               } else {

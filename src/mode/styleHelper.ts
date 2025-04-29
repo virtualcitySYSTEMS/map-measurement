@@ -3,8 +3,9 @@ import {
   getDefaultHighlightStyle,
   originalFeatureSymbol,
 } from '@vcmap/core';
-import Feature, { FeatureLike } from 'ol/Feature.js';
-import { Style } from 'ol/style.js';
+import type { FeatureLike } from 'ol/Feature.js';
+import type Feature from 'ol/Feature.js';
+import type { Style } from 'ol/style.js';
 import { measurementModeSymbol, MeasurementType } from './measurementMode.js';
 import Distance2D from './distance2D.js';
 import Area2D from './area2D.js';

@@ -1,11 +1,11 @@
 import { watch } from 'vue';
-import {
+import type {
   CreateFeatureSession,
   GeometryType,
   SelectFeaturesSession,
-  SessionType,
 } from '@vcmap/core';
-import { MeasurementManager } from '../measurementManager.js';
+import { SessionType } from '@vcmap/core';
+import type { MeasurementManager } from '../measurementManager.js';
 
 function addKeyListeners(manager: MeasurementManager): () => void {
   const { currentSession, currentEditSession, currentLayer, currentFeatures } =

@@ -1,3 +1,4 @@
+import type { ObliqueImage, CreateFeatureSession } from '@vcmap/core';
 import {
   cartesian3DDistance as distance3D,
   mercatorProjection,
@@ -9,17 +10,16 @@ import {
   getDefaultHighlightStyle,
   originalFeatureSymbol,
   ObliqueMap,
-  ObliqueImage,
-  CreateFeatureSession,
 } from '@vcmap/core';
-import { VcsUiApp } from '@vcmap/ui';
+import type { VcsUiApp } from '@vcmap/ui';
 import { Cartesian3, Matrix3 } from '@vcmap-cesium/engine';
-import Feature from 'ol/Feature.js';
-import { Coordinate } from 'ol/coordinate.js';
+import type Feature from 'ol/Feature.js';
+import type { Coordinate } from 'ol/coordinate.js';
 import { transform } from 'ol/proj';
-import { Geometry, LineString, Point } from 'ol/geom';
+import type { Geometry } from 'ol/geom';
+import { LineString, Point } from 'ol/geom';
 import { Style } from 'ol/style.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { MeasurementManager } from '../measurementManager.js';
 import MeasurementMode, {
   measurementModeSymbol,
   MeasurementType,

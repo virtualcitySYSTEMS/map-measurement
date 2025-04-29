@@ -7,8 +7,9 @@ import {
   Projection,
 } from '@vcmap/core';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
-import Feature from 'ol/Feature.js';
-import { Geometry, Polygon } from 'ol/geom.js';
+import type Feature from 'ol/Feature.js';
+import type { Geometry } from 'ol/geom.js';
+import { Polygon } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
 import MeasurementMode, {
   getValues,

@@ -1,4 +1,5 @@
 import Feature from 'ol/Feature.js';
+import type { Projection, VcsMap } from '@vcmap/core';
 import {
   CesiumMap,
   GeometryType,
@@ -7,14 +8,13 @@ import {
   ObliqueMap,
   OpenlayersMap,
   originalFeatureSymbol,
-  Projection,
-  VcsMap,
   wgs84Projection,
 } from '@vcmap/core';
-import { VcsUiApp } from '@vcmap/ui';
-import { ShallowRef, shallowRef } from 'vue';
-import { Text } from 'ol/style.js';
-import { MeasurementManager } from '../measurementManager.js';
+import type { VcsUiApp } from '@vcmap/ui';
+import type { ShallowRef } from 'vue';
+import { shallowRef } from 'vue';
+import type { Text } from 'ol/style.js';
+import type { MeasurementManager } from '../measurementManager.js';
 
 export type MeasurementValues = {
   type: MeasurementType;
@@ -68,7 +68,7 @@ export enum MeasurementType {
   ObliqueHeight2D = 'ObliqueHeight2D',
 }
 
-export const MeasurementGeometryType = {
+export const measurementGeometryType = {
   [MeasurementType.Position3D]: GeometryType.Point,
   [MeasurementType.Position2D]: GeometryType.Point,
   [MeasurementType.Distance2D]: GeometryType.LineString,
@@ -186,7 +186,6 @@ class MeasurementMode {
     return Promise.resolve(this.check(feature));
   }
 
-  // eslint-disable-next-line class-methods-use-this
   createTemplateFeature(): Feature {
     const feature = new Feature();
     feature.set(measurementTypeProperty, this.type);
