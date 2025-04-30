@@ -4,12 +4,14 @@ import { SessionType } from '@vcmap/core';
 import type { SelectToolboxComponentOptions, VcsUiApp } from '@vcmap/ui';
 import { ToolboxType } from '@vcmap/ui';
 import { name } from '../../package.json';
+import type { MeasurementPlugin } from '../index.js';
 import type { MeasurementManager } from '../measurementManager.js';
 import { createMeasurementMode } from '../measurementManager.js';
 import {
   measurementGeometryType,
   MeasurementType,
 } from '../mode/measurementMode.js';
+import type { MeasurementConfig } from './configHelper';
 
 type MeasurementToolbox = {
   toolbox: SelectToolboxComponentOptions;
@@ -34,7 +36,10 @@ export const measurementTypeIcon = {
   [MeasurementType.ObliqueHeight2D]: '$vcs2dHeightOblique',
 };
 
-function createCreateToolbox(manager: MeasurementManager): MeasurementToolbox {
+function createCreateToolbox(
+  manager: MeasurementManager,
+  disabled: boolean,
+): MeasurementToolbox {
   const createCreateButton = (
     measurementType: MeasurementType,
   ): MeasurementToolButton => ({
@@ -50,6 +55,7 @@ function createCreateToolbox(manager: MeasurementManager): MeasurementToolbox {
       name: 'creation',
       currentIndex: 0,
       active: false,
+      disabled,
       callback(): void {
         if (this.active) {
           manager.stop();
@@ -105,32 +111,42 @@ export function addToolButtons(
   manager: MeasurementManager,
   app: VcsUiApp,
 ): () => void {
+  const { config } = app.plugins.getByKey(name) as MeasurementPlugin;
+  let disabled =
+    config[app.maps.activeMap!.className as keyof MeasurementConfig]?.disable;
+
   const { toolbox: createToolbox, destroy: destroyCreateToolbox } =
-    createCreateToolbox(manager);
+    createCreateToolbox(manager, disabled);
   const createId = app.toolboxManager.add(createToolbox, name).id;
 
   function updateTools(): void {
+    disabled =
+      config[app.maps.activeMap!.className as keyof MeasurementConfig]?.disable;
     createToolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
+    createToolbox.action.disabled = disabled;
+    if (!disabled) {
+      const filteredTools = createToolbox.action.tools.filter((tool) => {
+        return createMeasurementMode(
+          tool.name as MeasurementType,
+          app,
+          manager,
+        )?.supportedMaps.includes(app.maps.activeMap!.className);
+      });
 
-    const filteredTools = createToolbox.action.tools.filter((tool) => {
-      return createMeasurementMode(
-        tool.name as MeasurementType,
-        app,
-        manager,
-      )?.supportedMaps.includes(app.maps.activeMap!.className);
-    });
+      filteredTools.forEach((tool) => {
+        tool.disabled = false;
+      });
 
-    filteredTools.forEach((tool) => {
-      tool.disabled = false;
-    });
-
-    const { currentIndex } = createToolbox.action;
-    if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
-      createToolbox.action.currentIndex = createToolbox.action.tools.findIndex(
-        (tool) => (tool.name as MeasurementType) === MeasurementType.Distance2D,
-      );
+      const { currentIndex } = createToolbox.action;
+      if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
+        createToolbox.action.currentIndex =
+          createToolbox.action.tools.findIndex(
+            (tool) =>
+              (tool.name as MeasurementType) === MeasurementType.Distance2D,
+          );
+      }
     }
 
     if (manager.currentFeatures.value) {

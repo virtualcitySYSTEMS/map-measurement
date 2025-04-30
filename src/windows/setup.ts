@@ -11,7 +11,7 @@ import {
 } from '@vcmap/ui';
 import { unByKey } from 'ol/Observable.js';
 import type { SimpleMeasurementItem } from '../category/simpleCategory.js';
-import measurementWindow from './measurementWindow.vue';
+import MeasurementWindow from './MeasurementWindow.vue';
 import { createExportCallback } from '../util/actionHelper.js';
 import type { MeasurementManager } from '../measurementManager.js';
 import { name } from '../../package.json';
@@ -26,7 +26,7 @@ export default function setupMeasurementResultWindow(
 ): { destroy: () => void } {
   const windowId = 'tempMeasurementWindowId';
   const editor = {
-    component: measurementWindow,
+    component: MeasurementWindow,
     provides: {
       app,
       manager,

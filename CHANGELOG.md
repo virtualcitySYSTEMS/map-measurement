@@ -1,3 +1,7 @@
+# v3.0.1
+
+- Added configuration options for each map: disabling the tools and setting the decimal places
+
 # v3.0.0
 
 - update to @vcmap/ui 6.1 & @vcmap/core 6.1

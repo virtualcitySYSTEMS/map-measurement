@@ -38,15 +38,6 @@
     ".": "./src/index.js",
     "./dist": "./dist/index.js"
   },
-  "eslintIgnore": [
-    "node_modules",
-    "dist",
-    "plugin-assets"
-  ],
-  "eslintConfig": {
-    "root": true,
-    "extends": "@vcsuite/eslint-config/vue"
-  },
   "prettier": "@vcsuite/eslint-config/prettier.js",
   "peerDependencies": {
     "@vcmap-cesium/engine": "^11.0.2",

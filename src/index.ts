@@ -1,30 +1,45 @@
-import type { VcsUiApp, VcsPlugin, WindowPosition } from '@vcmap/ui';
+import type {
+  VcsUiApp,
+  VcsPlugin,
+  WindowPosition,
+  PluginConfigEditor,
+} from '@vcmap/ui';
 import { getDefaultProjection, moduleIdSymbol } from '@vcmap/core';
 
 import { name, version, mapVersion } from '../package.json';
 import { addToolButtons } from './util/toolbox.js';
 import { createMeasurementManager } from './measurementManager.js';
-import setupMeasurementResultWindow from './window/setup.js';
+import setupMeasurementResultWindow from './windows/setup.js';
 import setupKeyListeners from './util/keyListeners.js';
 import addContextMenu from './util/context.js';
 import SimpleMeasurementCategory, {
   createCategory,
 } from './category/simpleCategory.js';
 import { MeasurementType } from './mode/measurementMode.js';
+import {
+  getDefaultOptions,
+  parseOptions,
+  MapNames,
+  type MeasurementConfig,
+} from './util/configHelper.js';
+import MeasurementConfigEditor from './windows/MeasurementConfigEditor.vue';
 
-type PluginState = {
+type MeasurementState = {
   active: boolean;
   windowPosition: WindowPosition;
 };
-type PluginConfig = Record<never, never>;
-type MeasurementPlugin = VcsPlugin<PluginConfig, PluginState> & {
-  readonly config: PluginConfig;
+export type MeasurementPlugin = VcsPlugin<
+  MeasurementConfig,
+  MeasurementState
+> & {
+  readonly config: Required<MeasurementConfig>;
 };
 
 export default function measurementPlugin(
-  config: PluginConfig,
+  options: MeasurementConfig,
 ): MeasurementPlugin {
   let destroy = (): void => {};
+  const config = parseOptions(options);
   return {
     get name(): string {
       return name;
@@ -35,7 +50,7 @@ export default function measurementPlugin(
     get mapVersion(): string {
       return mapVersion;
     },
-    get config(): PluginConfig {
+    get config(): Required<MeasurementConfig> {
       return config;
     },
     async initialize(app: VcsUiApp): Promise<void> {
@@ -89,6 +104,49 @@ export default function measurementPlugin(
           mapActivatedListener();
         },
       );
+    },
+    getDefaultOptions,
+    toJSON(): MeasurementConfig {
+      const serial: MeasurementConfig = {};
+      const defaultOptions = getDefaultOptions();
+
+      function ensureSerialHasMap(map: MapNames): void {
+        if (!serial[map]) {
+          Object.assign(serial, { [map]: {} });
+        }
+      }
+
+      Object.values(MapNames).forEach((map) => {
+        if (config[map].disable !== defaultOptions[map].disable) {
+          ensureSerialHasMap(map);
+          serial[map]!.disable = config[map].disable;
+        }
+        if (config[map].decimalPlaces !== defaultOptions[map].decimalPlaces) {
+          ensureSerialHasMap(map);
+          serial[map]!.decimalPlaces = config[map].decimalPlaces;
+        }
+      });
+      (
+        [MapNames.Cesium, MapNames.Oblique] as (
+          | MapNames.Cesium
+          | MapNames.Oblique
+        )[]
+      ).forEach((map) => {
+        if (config[map].decimalPlacesZ !== defaultOptions[map].decimalPlacesZ) {
+          ensureSerialHasMap(map);
+          serial[map]!.decimalPlacesZ = config[map].decimalPlacesZ;
+        }
+      });
+
+      if (
+        config[MapNames.Cesium].decimalPlacesAngle !==
+        defaultOptions[MapNames.Cesium].decimalPlacesAngle
+      ) {
+        ensureSerialHasMap(MapNames.Cesium);
+        serial[MapNames.Cesium]!.decimalPlacesAngle =
+          config[MapNames.Cesium].decimalPlacesAngle;
+      }
+      return serial;
     },
     i18n: {
       en: {
@@ -146,6 +204,15 @@ export default function measurementPlugin(
             removeSelected: 'Remove selection',
             exportSelected: 'Export selection',
             import: 'Import',
+          },
+          config: {
+            title: 'Measurement Config Editor',
+            decimalPlaces: 'Number of decimals',
+            decimalPlacesZ: 'Number of altimetry decimals',
+            decimalPlacesAngle: 'Number of angle decimals',
+            disable: 'Disable measurements for this map',
+            enable: 'Enable measurements for this map',
+            errorInput: 'Input must be a positive number',
           },
           hint: {
             oblique: {
@@ -213,6 +280,15 @@ export default function measurementPlugin(
             exportSelected: 'Selektion exportieren',
             import: 'Importieren',
           },
+          config: {
+            title: 'Messung Konfiguration',
+            decimalPlaces: 'Anzahl der Dezimalstellen',
+            decimalPlacesZ: 'Anzahl der Höhen-Dezimalstellen',
+            decimalPlacesAngle: 'Anzahl der Winkeldezimalstellen',
+            disable: 'Messung für diese Karte deaktivieren',
+            enable: 'Messung für diese Karte aktivieren',
+            errorInput: 'Eingabe muss eine positive Zahl sein',
+          },
           hint: {
             oblique: {
               distance:
@@ -223,6 +299,14 @@ export default function measurementPlugin(
           },
         },
       },
+    },
+    getConfigEditors(): PluginConfigEditor<object>[] {
+      return [
+        {
+          component: MeasurementConfigEditor,
+          title: 'measurement.config.title',
+        },
+      ];
     },
     destroy(): void {
       destroy();

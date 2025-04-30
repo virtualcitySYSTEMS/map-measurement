@@ -297,9 +297,9 @@
       VImg,
     },
     setup(_, { attrs }) {
+      const app = inject('app') as VcsUiApp;
       const windowState = attrs['window-state'] as WindowState;
       const windowId = windowState.id;
-      const app = inject('app') as VcsUiApp;
       const activeMapClassName = app.maps.activeMap?.className;
       const manager = inject('manager') as MeasurementManager;
       const { values } = manager.currentMeasurementMode.value!;

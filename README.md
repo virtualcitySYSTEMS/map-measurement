@@ -69,3 +69,29 @@ Each measurement added to My Workspace is listed there in the Measurements secti
 - Rename the measurement.
 - Zoom to the extent of the measurement.
 - Remove the measurement from My Workspace.
+
+## Configuration
+
+For each map, two proporties can be set: whether to disable the measurement tools and the number of decimals to display.
+
+The default configuration is shown below, and can be used as an example to set a different configuration:
+
+```json
+{
+  "CesiumMap": {
+    "disable": false,
+    "decimalPlaces": 2
+  },
+  "ObliqueMap": {
+    "disable": false,
+    "decimalPlaces": 2
+  },
+  "OpenlayersMap": {
+    "disable": false,
+    "decimalPlaces": 2
+    // "decimalPlacesZ": 0
+  }
+}
+```
+
+The number of decimal places for altimetry can also be set independently, as indicated above. When this value is not defined, the `decimalPlaces` value is used.

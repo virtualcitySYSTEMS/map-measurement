@@ -8,13 +8,16 @@ import {
   ObliqueMap,
   OpenlayersMap,
   originalFeatureSymbol,
-  wgs84Projection,
 } from '@vcmap/core';
 import type { VcsUiApp } from '@vcmap/ui';
 import type { ShallowRef } from 'vue';
 import { shallowRef } from 'vue';
 import type { Text } from 'ol/style.js';
+import type { MeasurementPlugin } from '../index.js';
 import type { MeasurementManager } from '../measurementManager.js';
+import { MapNames } from '../util/configHelper.js';
+import type { MeasurementConfig } from '../util/configHelper.js';
+import { name } from '../../package.json';
 
 export type MeasurementValues = {
   type: MeasurementType;
@@ -94,9 +97,6 @@ export function isSupportedMeasurement(feature: Feature, map: VcsMap): boolean {
     [];
   return supportedMaps.includes(map.className);
 }
-function getDecimalPlacesForProjection(projection: Projection): number {
-  return projection.epsg === wgs84Projection.epsg ? 6 : 2;
-}
 type MeasurementModeOptions = {
   app: VcsUiApp;
   manager: MeasurementManager;
@@ -109,9 +109,11 @@ class MeasurementMode {
 
   projection: Projection;
 
-  crsDecimalPlaces: number;
-
   decimalPlaces: number;
+
+  decimalPlacesZ?: number;
+
+  decimalPlacesAngle: number;
 
   templateFeature: Feature;
 
@@ -121,10 +123,20 @@ class MeasurementMode {
     this.app = options.app;
     this.manager = options.manager;
     this.projection = getDefaultProjection();
-    this.crsDecimalPlaces = getDecimalPlacesForProjection(this.projection);
-    this.decimalPlaces = 2;
     this.templateFeature = this.createTemplateFeature();
     this.values = shallowRef(this.defaultValues);
+    const { config } = this.app.plugins.getByKey(name) as MeasurementPlugin;
+    const activeMapClassName = this.app.maps.activeMap?.className;
+    this.decimalPlaces =
+      config[activeMapClassName as keyof MeasurementConfig].decimalPlaces;
+    this.decimalPlacesAngle = config[MapNames.Cesium].decimalPlacesAngle;
+    if (
+      activeMapClassName === MapNames.Cesium ||
+      activeMapClassName === MapNames.Oblique
+    ) {
+      this.decimalPlacesZ =
+        config[activeMapClassName].decimalPlacesZ ?? this.decimalPlaces;
+    }
   }
 
   get defaultValues(): MeasurementValues {
@@ -157,7 +169,7 @@ class MeasurementMode {
     return [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className];
   }
 
-  getValue(value: number, square = false): string {
+  getValue(value: number, square = false, useDecimalPLacesZ = false): string {
     let abs = Math.abs(value);
     const potential = square ? 2 : 1;
     let unit = square ? 'm²' : 'm';
@@ -168,7 +180,8 @@ class MeasurementMode {
     }
 
     const formattedValue =
-      (value < 0 ? '-' : '') + abs.toFixed(this.decimalPlaces);
+      (value < 0 ? '-' : '') +
+      abs.toFixed(useDecimalPLacesZ ? this.decimalPlacesZ : this.decimalPlaces);
     return `${formattedValue} ${unit}`;
   }
 
@@ -178,7 +191,6 @@ class MeasurementMode {
     if (!geometry) {
       return false;
     }
-
     return geometry.getCoordinates().length !== 0;
   }
 
@@ -198,20 +210,14 @@ class MeasurementMode {
       textBaseline: 'bottom',
       offsetY: -20,
       offsetX: 0,
-      fill: {
-        color: [3, 9, 53, 1],
-      },
-      stroke: {
-        color: [255, 255, 255, 1],
-        width: 2,
-      },
+      fill: { color: [3, 9, 53, 1] },
+      stroke: { color: [255, 255, 255, 1], width: 2 },
     });
   }
 
   setProjection(projection: Projection): void {
     if (projection.epsg !== this.projection.epsg) {
       this.projection = projection;
-      this.crsDecimalPlaces = getDecimalPlacesForProjection(projection);
     }
   }
 }

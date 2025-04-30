@@ -96,7 +96,7 @@ class Height3D extends MeasurementMode {
         scratchValues[key] = val;
         // eslint-disable-next-line
         // @ts-ignore
-        this.values.value[key] = this.getValue(val);
+        this.values.value[key] = this.getValue(val, false, key === 'height');
       }
 
       const alpha = CesiumMath.toDegrees(
@@ -106,10 +106,10 @@ class Height3D extends MeasurementMode {
 
       this.values.value = {
         ...this.values.value,
-        alpha: `${alpha.toFixed(this.decimalPlaces)}°`,
-        beta: `${beta.toFixed(this.decimalPlaces)}°`,
-        groundAltitude: this.getValue(coords[lowerPoint][2]),
-        heightAltitude: this.getValue(thirdPoint[2]),
+        alpha: `${alpha.toFixed(this.decimalPlacesAngle)}°`,
+        beta: `${beta.toFixed(this.decimalPlacesAngle)}°`,
+        groundAltitude: this.getValue(coords[lowerPoint][2], false, true),
+        heightAltitude: this.getValue(thirdPoint[2], false, true),
       };
     }
     return Promise.resolve(true);
