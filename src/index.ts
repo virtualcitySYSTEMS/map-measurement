@@ -155,7 +155,6 @@ export default function measurementPlugin(
             title: 'Temporary measurement',
           },
           create: {
-            new: 'New',
             [MeasurementType.Position2D]: '2D-Point',
             [MeasurementType.Position3D]: '3D-Point',
             [MeasurementType.Distance2D]: '2D-Distance',
@@ -165,7 +164,6 @@ export default function measurementPlugin(
             [MeasurementType.ObliqueHeight2D]: '2D-Height',
             [MeasurementType.Height3D]: '3D-Height',
             tooltip: {
-              addToWorkspace: 'Add to My Workspace',
               [MeasurementType.Position2D]: 'Measure 2D-Point',
               [MeasurementType.Position3D]: 'Measure 3D-Point',
               [MeasurementType.Distance2D]: 'Measure 2D-Distance',
@@ -230,7 +228,6 @@ export default function measurementPlugin(
             title: 'Temporäre Messung',
           },
           create: {
-            new: 'Neu',
             [MeasurementType.Position2D]: '2D-Punkt',
             [MeasurementType.Position3D]: '3D-Punkt',
             [MeasurementType.Distance2D]: '2D-Distanz',
@@ -240,7 +237,6 @@ export default function measurementPlugin(
             [MeasurementType.ObliqueHeight2D]: '2D-Höhe',
             [MeasurementType.Height3D]: '3D-Höhe',
             tooltip: {
-              addToWorkspace: 'In Mein Arbeitsbereich hinzufügen',
               [MeasurementType.Position2D]: '2D-Punkt messen',
               [MeasurementType.Position3D]: '3D-Punkt messen',
               [MeasurementType.Distance2D]: '2D-Distanz messen',

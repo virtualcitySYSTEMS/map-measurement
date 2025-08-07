@@ -4,6 +4,9 @@ import type {
   SelectFeaturesSession,
 } from '@vcmap/core';
 import {
+  CesiumMap,
+  OpenlayersMap,
+  ObliqueMap,
   Category,
   writeGeoJSONFeature,
   parseGeoJSON,
@@ -17,6 +20,7 @@ import type {
   CollectionComponentListItem,
   VcsUiApp,
 } from '@vcmap/ui';
+import { createSupportedMapMappingFunction } from '@vcmap/ui';
 import { reactive } from 'vue';
 import { Feature } from 'ol';
 import { unByKey } from 'ol/Observable.js';
@@ -348,16 +352,25 @@ export async function createCategory(
   const { action: removeAction, destroy: destroyRemoveAction } =
     createDeleteSelectedAction(manager, categoryUiItem, false);
 
-  app.categoryManager.addActions([hideAllAction, removeAction], name, [
-    categoryUiItem.id,
-  ]);
-
-  app.categoryManager.addMappingFunction(
-    () => true,
-    itemMappingFunction.bind(null, app, manager),
-    name,
-    [category.name],
+  categoryUiItem.addActions(
+    [hideAllAction, removeAction].map((action) => ({
+      action,
+      owner: name,
+    })),
   );
+
+  categoryUiItem.addItemMapping({
+    mappingFunction: itemMappingFunction.bind(null, app, manager),
+    owner: name,
+  });
+
+  categoryUiItem.addItemMapping({
+    mappingFunction: createSupportedMapMappingFunction(
+      [CesiumMap.className, OpenlayersMap.className, ObliqueMap.className],
+      app.maps,
+    ),
+    owner: name,
+  });
 
   return {
     categoryUiItem,

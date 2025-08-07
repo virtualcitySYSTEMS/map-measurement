@@ -1,3 +1,9 @@
+# v4.0.0
+
+- Update to @vcmap/core 6.2 and @vcmap/ui 6.2
+- Fixed a bug where add to my workspace would show, even if my workspace was hidden
+- Fixed a bug where the measurement would still be enabled even if no measurement type was supported.
+
 # v3.0.1
 
 - Added configuration options for each map: disabling the tools and setting the decimal places

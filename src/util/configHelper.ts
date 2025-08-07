@@ -2,6 +2,7 @@ export enum MapNames {
   OpenLayers = 'OpenlayersMap',
   Oblique = 'ObliqueMap',
   Cesium = 'CesiumMap',
+  Panorama = 'PanoramaMap',
 }
 
 export type MeasurementConfig = {
@@ -20,6 +21,11 @@ export type MeasurementConfig = {
     decimalPlacesAngle: number;
     decimalPlacesZ?: number;
   };
+  [MapNames.Panorama]?: {
+    disable: boolean;
+    decimalPlaces: number;
+    decimalPlacesZ?: number;
+  };
 };
 
 export function getDefaultOptions(): Required<MeasurementConfig> {
@@ -35,6 +41,10 @@ export function getDefaultOptions(): Required<MeasurementConfig> {
     },
     [MapNames.Oblique]: {
       disable: false,
+      decimalPlaces: 2,
+    },
+    [MapNames.Panorama]: {
+      disable: true,
       decimalPlaces: 2,
     },
   };
@@ -56,6 +66,9 @@ export function parseOptions(
     [MapNames.Oblique]: {
       ...defaultOptions[MapNames.Oblique],
       ...options[MapNames.Oblique],
+    },
+    [MapNames.Panorama]: {
+      ...defaultOptions[MapNames.Panorama],
     },
   };
   return parsedConfig;

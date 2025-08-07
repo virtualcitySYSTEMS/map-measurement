@@ -139,6 +139,8 @@ export function addToolButtons(
         tool.disabled = false;
       });
 
+      createToolbox.action.disabled = filteredTools.length === 0;
+
       const { currentIndex } = createToolbox.action;
       if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
         createToolbox.action.currentIndex =

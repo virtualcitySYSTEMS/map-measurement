@@ -1,5 +1,10 @@
 <template>
-  <v-sheet v-if="values">
+  <VcsWorkspaceWrapper
+    :disable-add="isPersistent || isInCreation || !isEditable"
+    :disable-new="!isMapSupported"
+    @new-clicked="createNewMeasurement"
+    @add-clicked="addToCategory"
+  >
     <VcsFormSection
       :heading="`measurement.create.${values.type}`"
       :header-actions="editActions"
@@ -230,22 +235,7 @@
       >
       </VcsDataTable>
     </VcsFormSection>
-    <div class="d-flex w-full justify-space-between px-2 pt-2 pb-1">
-      <VcsFormButton
-        icon="$vcsComponentsPlus"
-        :disabled="isPersistent || isInCreation || !isEditable"
-        :tooltip="$t('measurement.create.tooltip.addToWorkspace')"
-        @click="addToCategory"
-      />
-      <VcsFormButton
-        variant="filled"
-        :disabled="!isMapSupported"
-        @click="createNewMeasurement"
-      >
-        {{ $t('measurement.create.new') }}
-      </VcsFormButton>
-    </div>
-  </v-sheet>
+  </VcsWorkspaceWrapper>
 </template>
 
 <script lang="ts">
@@ -255,10 +245,10 @@
     VcsFormSection,
     VcsLabel,
     VcsActionButtonList,
-    VcsFormButton,
+    VcsWorkspaceWrapper,
     getPluginAssetUrl,
   } from '@vcmap/ui';
-  import { VRow, VCol, VSheet, VImg } from 'vuetify/components';
+  import { VRow, VCol, VImg } from 'vuetify/components';
   import type { Ref, ShallowRef } from 'vue';
   import {
     inject,
@@ -290,10 +280,9 @@
       VcsFormSection,
       VcsLabel,
       VcsActionButtonList,
-      VcsFormButton,
+      VcsWorkspaceWrapper,
       VRow,
       VCol,
-      VSheet,
       VImg,
     },
     setup(_, { attrs }) {
