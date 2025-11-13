@@ -24,6 +24,7 @@ export type MeasurementConfig = {
   [MapNames.Panorama]?: {
     disable: boolean;
     decimalPlaces: number;
+    decimalPlacesAngle: number;
     decimalPlacesZ?: number;
   };
 };
@@ -44,8 +45,9 @@ export function getDefaultOptions(): Required<MeasurementConfig> {
       decimalPlaces: 2,
     },
     [MapNames.Panorama]: {
-      disable: true,
+      disable: false,
       decimalPlaces: 2,
+      decimalPlacesAngle: 3,
     },
   };
 }
@@ -69,6 +71,7 @@ export function parseOptions(
     },
     [MapNames.Panorama]: {
       ...defaultOptions[MapNames.Panorama],
+      ...options[MapNames.Panorama],
     },
   };
   return parsedConfig;

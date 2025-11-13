@@ -4,17 +4,14 @@ import type {
   WindowPosition,
   PluginConfigEditor,
 } from '@vcmap/ui';
-import { getDefaultProjection, moduleIdSymbol } from '@vcmap/core';
-
+import { getDefaultProjection } from '@vcmap/core';
 import { name, version, mapVersion } from '../package.json';
 import { addToolButtons } from './util/toolbox.js';
-import { createMeasurementManager } from './measurementManager.js';
-import setupMeasurementResultWindow from './windows/setup.js';
-import setupKeyListeners from './util/keyListeners.js';
+import {
+  createMeasurementManager,
+  type MeasurementManager,
+} from './measurementManager.js';
 import addContextMenu from './util/context.js';
-import SimpleMeasurementCategory, {
-  createCategory,
-} from './category/simpleCategory.js';
 import { MeasurementType } from './mode/measurementMode.js';
 import {
   getDefaultOptions,
@@ -28,18 +25,22 @@ type MeasurementState = {
   active: boolean;
   windowPosition: WindowPosition;
 };
+
 export type MeasurementPlugin = VcsPlugin<
   MeasurementConfig,
   MeasurementState
 > & {
   readonly config: Required<MeasurementConfig>;
+  readonly manager: MeasurementManager;
 };
 
 export default function measurementPlugin(
   options: MeasurementConfig,
 ): MeasurementPlugin {
   let destroy = (): void => {};
+  let measurementManager: MeasurementManager | undefined;
   const config = parseOptions(options);
+
   return {
     get name(): string {
       return name;
@@ -53,57 +54,38 @@ export default function measurementPlugin(
     get config(): Required<MeasurementConfig> {
       return config;
     },
-    async initialize(app: VcsUiApp): Promise<void> {
-      const measurementManager = createMeasurementManager(app);
-
-      app.categoryClassRegistry.registerClass(
-        this[moduleIdSymbol],
-        SimpleMeasurementCategory.className,
-        SimpleMeasurementCategory,
-      );
-
-      const { categoryUiItem: collectionComponent, destroy: destroyCategory } =
-        await createCategory(measurementManager, app);
-
+    get manager(): MeasurementManager {
+      if (!measurementManager) {
+        throw new Error('Measurement manager not yet initialized');
+      }
+      return measurementManager;
+    },
+    initialize(app: VcsUiApp): Promise<void> {
       const projectionListener = [
         app.moduleAdded.addEventListener(() => {
-          measurementManager.currentMeasurementMode.value?.setProjection(
+          measurementManager?.currentMeasurementMode.value?.setProjection(
             getDefaultProjection(),
           );
         }),
         app.moduleRemoved.addEventListener(() => {
-          measurementManager.currentMeasurementMode.value?.setProjection(
+          measurementManager?.currentMeasurementMode.value?.setProjection(
             getDefaultProjection(),
           );
         }),
       ];
+      measurementManager = createMeasurementManager(app);
+      const destroyButtons = addToolButtons(measurementManager, app);
+      addContextMenu(app, measurementManager);
 
-      const mapActivatedListener = app.maps.mapActivated.addEventListener(
-        () => {
-          const destroyButtons = addToolButtons(measurementManager, app);
-          const { destroy: destroyMeasurementWindow } =
-            setupMeasurementResultWindow(
-              measurementManager,
-              app,
-              collectionComponent,
-            );
+      destroy = (): void => {
+        projectionListener.forEach((cb) => {
+          cb();
+        });
+        destroyButtons();
+        measurementManager?.destroy();
+      };
 
-          const destroyKeyListeners = setupKeyListeners(measurementManager);
-
-          addContextMenu(app, measurementManager, this.name);
-          destroy = (): void => {
-            projectionListener.forEach((cb) => {
-              cb();
-            });
-            destroyButtons();
-            destroyMeasurementWindow();
-            destroyCategory();
-            destroyKeyListeners();
-            measurementManager.destroy();
-          };
-          mapActivatedListener();
-        },
-      );
+      return Promise.resolve();
     },
     getDefaultOptions,
     toJSON(): MeasurementConfig {
@@ -126,17 +108,16 @@ export default function measurementPlugin(
           serial[map]!.decimalPlaces = config[map].decimalPlaces;
         }
       });
-      (
-        [MapNames.Cesium, MapNames.Oblique] as (
-          | MapNames.Cesium
-          | MapNames.Oblique
-        )[]
-      ).forEach((map) => {
-        if (config[map].decimalPlacesZ !== defaultOptions[map].decimalPlacesZ) {
-          ensureSerialHasMap(map);
-          serial[map]!.decimalPlacesZ = config[map].decimalPlacesZ;
-        }
-      });
+      ([MapNames.Cesium, MapNames.Oblique, MapNames.Panorama] as const).forEach(
+        (map) => {
+          if (
+            config[map].decimalPlacesZ !== defaultOptions[map].decimalPlacesZ
+          ) {
+            ensureSerialHasMap(map);
+            serial[map]!.decimalPlacesZ = config[map].decimalPlacesZ;
+          }
+        },
+      );
 
       if (
         config[MapNames.Cesium].decimalPlacesAngle !==
@@ -173,6 +154,8 @@ export default function measurementPlugin(
               [MeasurementType.ObliqueHeight2D]: 'Measure 2D-Height',
               [MeasurementType.Height3D]: 'Measure 3D-Height',
             },
+            noFeature: 'Click on the map to start measuring',
+            failed: 'Failed to create a valid geometry for the measurement',
           },
           value: {
             point: 'Point',
@@ -188,20 +171,12 @@ export default function measurementPlugin(
             alpha: 'Alpha',
           },
           edit: 'Edit measurement',
-          select: 'Select measurements',
+          select: 'Select measurement',
           category: {
             title: 'Measurements',
-            selectAll: 'Select all',
-            hideSelected: 'Hide measurements',
-            hideAll: 'Hide all',
-            showAll: 'Show all',
             zoomTo: 'Zoom to',
-            rename: 'Rename',
-            edit: 'Edit',
             remove: 'Remove',
             removeSelected: 'Remove selection',
-            exportSelected: 'Export selection',
-            import: 'Import',
           },
           config: {
             title: 'Measurement Config Editor',
@@ -246,6 +221,9 @@ export default function measurementPlugin(
               [MeasurementType.ObliqueHeight2D]: '2D-Höhe messen',
               [MeasurementType.Height3D]: '3D-Höhe messen',
             },
+            noFeature: 'Klicken Sie auf die Karte, um eine Messung zu starten',
+            failed:
+              'Es konnte keine gültige Geometrie für die Messung erstellt werden',
           },
           value: {
             point: 'Punkt',
@@ -261,20 +239,12 @@ export default function measurementPlugin(
             alpha: 'Alpha',
           },
           edit: 'Messung editieren',
-          select: 'Messungen',
+          select: 'Messung selektieren',
           category: {
             title: 'Messungen',
-            selectAll: 'Alle selektieren',
-            hideSelected: 'Selektierte Messungen ausblenden',
-            hideAll: 'Alle ausblenden',
-            showAll: 'Alle einblenden',
             zoomTo: 'Hin zoomen',
-            rename: 'Umbenennen',
-            edit: 'Editieren',
             remove: 'Entfernen',
             removeSelected: 'Selektion löschen',
-            exportSelected: 'Selektion exportieren',
-            import: 'Importieren',
           },
           config: {
             title: 'Messung Konfiguration',

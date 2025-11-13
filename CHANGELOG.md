@@ -1,3 +1,8 @@
+# v5.0.0
+
+- Update to @vcmap/core 6.3 and @vcmap/ui 6.3
+- Allows measuring in panorama.
+
 # v4.0.0
 
 - Update to @vcmap/core 6.2 and @vcmap/ui 6.2

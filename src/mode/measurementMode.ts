@@ -14,7 +14,10 @@ import type { ShallowRef } from 'vue';
 import { shallowRef } from 'vue';
 import type { Text } from 'ol/style.js';
 import type { MeasurementPlugin } from '../index.js';
-import type { MeasurementManager } from '../measurementManager.js';
+import type {
+  MeasurementFeature,
+  MeasurementManager,
+} from '../measurementManager.js';
 import { MapNames } from '../util/configHelper.js';
 import type { MeasurementConfig } from '../util/configHelper.js';
 import { name } from '../../package.json';
@@ -82,15 +85,18 @@ export const measurementGeometryType = {
   [MeasurementType.ObliqueHeight2D]: GeometryType.LineString,
 };
 
-export function getValues(feature: Feature): MeasurementValues {
+export function getValues(feature: MeasurementFeature): MeasurementValues {
   if (feature[measurementModeSymbol]) {
-    return feature[measurementModeSymbol].values.value as MeasurementValues;
+    return feature[measurementModeSymbol].values.value;
   }
   return feature[originalFeatureSymbol]?.[measurementModeSymbol]?.values
     .value as MeasurementValues;
 }
 
-export function isSupportedMeasurement(feature: Feature, map: VcsMap): boolean {
+export function isSupportedMeasurement(
+  feature: MeasurementFeature,
+  map: VcsMap,
+): boolean {
   const supportedMaps: string[] =
     feature[measurementModeSymbol]?.supportedMaps ??
     feature[originalFeatureSymbol]?.[measurementModeSymbol]?.supportedMaps ??

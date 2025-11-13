@@ -5,9 +5,15 @@
     @new-clicked="createNewMeasurement"
     @add-clicked="addToCategory"
   >
+    <template v-if="!targetFeature">
+      <v-card class="pa-2" elevation="0">
+        {{ $t('measurement.create.noFeature') }}
+      </v-card>
+    </template>
     <VcsFormSection
+      v-if="targetFeature && values"
       :heading="`measurement.create.${values.type}`"
-      :header-actions="editActions"
+      :header-actions="[editAction]"
     >
       <!--point measurement block-->
       <VcsDataTable
@@ -222,8 +228,9 @@
     </VcsFormSection>
     <VcsFormSection
       v-if="
-        values.type === MeasurementType.Distance2D ||
-        values.type === MeasurementType.Distance3D
+        targetFeature &&
+        (values?.type === MeasurementType.Distance2D ||
+          values?.type === MeasurementType.Distance3D)
       "
       :heading="`measurement.value.points`"
     >
@@ -240,6 +247,7 @@
 
 <script lang="ts">
   import type { VcsUiApp, VcsAction, WindowState } from '@vcmap/ui';
+  import { getLogger } from '@vcsuite/logger';
   import {
     VcsDataTable,
     VcsFormSection,
@@ -247,31 +255,30 @@
     VcsActionButtonList,
     VcsWorkspaceWrapper,
     getPluginAssetUrl,
+    NotificationType,
   } from '@vcmap/ui';
-  import { VRow, VCol, VImg } from 'vuetify/components';
-  import type { Ref, ShallowRef } from 'vue';
+  import { VRow, VCol, VImg, VCard } from 'vuetify/components';
   import {
     inject,
-    ref,
+    reactive,
     watch,
     computed,
     onUnmounted,
-    shallowRef,
     defineComponent,
+    ref,
+    nextTick,
   } from 'vue';
-  import type { SelectFeaturesSession } from '@vcmap/core';
-  import { SessionType } from '@vcmap/core';
-  import type Feature from 'ol/Feature.js';
   import { unByKey } from 'ol/Observable.js';
   import { measurementTypeIcon } from '../util/toolbox.js';
-  import type { MeasurementManager } from '../measurementManager.js';
-  import type MeasurementMode from '../mode/measurementMode.js';
   import {
     doNotEditAndPersistent,
     measurementModeSymbol,
     MeasurementType,
   } from '../mode/measurementMode.js';
   import { name } from '../../package.json';
+
+  import { isCreateSession, isEditGeometrySession } from '../util/actionHelper';
+  import type { MeasurementPlugin } from '../index.js';
 
   export default defineComponent({
     name: 'MeasurementWindow',
@@ -284,53 +291,82 @@
       VRow,
       VCol,
       VImg,
+      VCard,
     },
-    setup(_, { attrs }) {
-      const app = inject('app') as VcsUiApp;
+    setup(_props, { attrs }) {
+      const app = inject('vcsApp') as VcsUiApp;
+      const { manager } = app.plugins.getByKey(name) as MeasurementPlugin;
       const windowState = attrs['window-state'] as WindowState;
-      const windowId = windowState.id;
       const activeMapClassName = app.maps.activeMap?.className;
-      const manager = inject('manager') as MeasurementManager;
-      const { values } = manager.currentMeasurementMode.value!;
-      const targetFeature: ShallowRef<Feature | undefined> = shallowRef();
-      const isPersistent = shallowRef(false);
-      const isInCreation = shallowRef(false);
-      const isEditable = shallowRef(false);
-      const isMapSupported = shallowRef(false);
+      const values = computed(() => {
+        return manager.currentMeasurementMode.value?.values?.value ?? undefined;
+      });
+      const isInCreation = ref(false);
+      const isEditable = ref(false);
+      const isMapSupported = ref(false);
+      const isPersistent = ref(false);
 
-      const editActions: Ref<VcsAction[]> = ref([
-        {
-          name: 'editAction',
-          icon: '$vcsEditVertices',
-          title: 'measurement.edit',
-          active:
-            manager.currentEditSession.value?.type ===
-            SessionType.EDIT_GEOMETRY,
-          disabled:
-            !isMapSupported.value || isInCreation.value || !isEditable.value,
-          callback(): void {
-            if (this.active) {
-              manager.stopEditing();
-            } else {
-              manager.startEditSession(targetFeature.value!);
-            }
-          },
+      const editAction = reactive<VcsAction>({
+        name: 'editAction',
+        icon: '$vcsEditVertices',
+        title: 'measurement.edit',
+        active: false,
+        disabled:
+          !isMapSupported.value || isInCreation.value || !isEditable.value,
+        callback(): void {
+          if (editAction.active) {
+            manager.stop();
+          } else if (manager.currentFeature.value) {
+            manager.startEditSession(manager.currentFeature.value);
+          }
         },
-      ]);
+      });
 
+      let creationFinished = (): void => {};
       watch(
-        () => manager.currentEditSession.value?.type,
+        manager.currentSession,
         () => {
-          editActions.value[0].active =
-            manager.currentEditSession.value?.type ===
-            SessionType.EDIT_GEOMETRY;
+          const session = manager.currentSession.value;
+          editAction.active = isEditGeometrySession(session);
+          const creationSession = isCreateSession(session);
+          isInCreation.value = creationSession;
+          const currentType = values.value?.type;
+          if (creationSession) {
+            creationFinished = session.creationFinished.addEventListener(
+              (feature) => {
+                if (
+                  !feature &&
+                  currentType &&
+                  currentType === values.value?.type
+                ) {
+                  app.notifier.add({
+                    type: NotificationType.WARNING,
+                    message: app.vueI18n.t('measurement.create.failed'),
+                  });
+                  manager
+                    .startCreateSession(values.value.type)
+                    .catch((err: unknown) => {
+                      getLogger(name).error(
+                        'Error starting create session',
+                        err,
+                      );
+                    });
+                }
+              },
+            );
+          }
         },
+        { immediate: true },
       );
 
-      watch([isMapSupported, isInCreation, isEditable], () => {
-        editActions.value[0].disabled =
-          !isMapSupported.value || isInCreation.value || !isEditable.value;
-      });
+      watch(
+        [isMapSupported, isInCreation, isEditable],
+        () => {
+          editAction.disabled =
+            !isMapSupported.value || isInCreation.value || !isEditable.value;
+        },
+        { immediate: true },
+      );
 
       const headers = computed(() => {
         const usedHeaders = [
@@ -339,7 +375,7 @@
           { title: 'Y', value: 'y' },
         ];
 
-        const { type } = values.value;
+        const type = values.value?.type;
         if (
           type === MeasurementType.Position3D ||
           type === MeasurementType.Area3D ||
@@ -352,34 +388,47 @@
       });
 
       let renameListener = (): void => {};
-      function setHeader(): void {
+      const featureTitle = ref('');
+      function setFeatureTitle(): void {
         renameListener();
-        const features = manager.currentFeatures.value;
-        if (features.length > 1) {
-          windowState.headerTitle = `(${features.length}) Features`;
-        } else if (manager.currentSession.value?.type === SessionType.CREATE) {
-          windowState.headerTitle = 'measurement.header.title';
-        } else if (features.length) {
-          const propertyChangeListener = features[0].on(
+        const feature = manager.currentFeature.value;
+        if (feature) {
+          const propertyChangeListener = feature.on(
             'propertychange',
             ({ key }) => {
               if (key === 'title') {
-                windowState.headerTitle = features[0].get(key);
+                featureTitle.value = feature.get('title');
               }
             },
           );
           renameListener = (): void => {
             unByKey(propertyChangeListener);
           };
-          windowState.headerTitle = features[0].get('title')
-            ? features[0].get('title')
-            : 'measurement.header.title';
-        }
-        if (manager.currentMeasurementMode.value) {
-          windowState.headerIcon =
-            measurementTypeIcon[manager.currentMeasurementMode.value.type];
+          featureTitle.value = feature.get('title');
         }
       }
+
+      watch([featureTitle, isPersistent], () => {
+        windowState.headerTitle =
+          isPersistent.value && featureTitle.value
+            ? featureTitle.value
+            : 'measurement.header.title';
+      });
+
+      watch(
+        manager.currentFeature,
+        (feature) => {
+          setFeatureTitle();
+          isPersistent.value = !!feature && manager.collection.has(feature);
+          isEditable.value = !!feature && !feature[doNotEditAndPersistent];
+          isMapSupported.value =
+            !!feature &&
+            feature[measurementModeSymbol].supportedMaps.includes(
+              app.maps.activeMap!.className,
+            );
+        },
+        { immediate: true },
+      );
 
       const sketchIcon = computed(() => {
         const theme = app.vuetify.theme.current.value.dark ? 'dark' : 'light';
@@ -391,37 +440,9 @@
       });
 
       watch(
-        manager.currentFeatures,
-        () => {
-          setHeader();
-          if (manager.currentFeatures.value.length > 0) {
-            targetFeature.value = manager.currentFeatures.value[0];
-            isPersistent.value = !!manager.category?.collection.hasKey(
-              targetFeature.value?.getId(),
-            );
-            isEditable.value = !targetFeature.value?.[doNotEditAndPersistent];
-            isMapSupported.value = // prettier-ignore
-              (
-                targetFeature.value?.[measurementModeSymbol] as MeasurementMode
-              )?.supportedMaps.includes(app.maps.activeMap!.className);
-          }
-        },
-        { immediate: true },
-      );
-
-      watch(
-        manager.currentSession,
-        () => {
-          isInCreation.value =
-            manager.currentSession.value?.type === SessionType.CREATE;
-        },
-        { immediate: true },
-      );
-
-      watch(
         values,
         () => {
-          const points = values.value.vertexPositions;
+          const points = values.value?.vertexPositions;
           if (points) {
             points.forEach((p) => {
               if (!p.name) {
@@ -429,17 +450,24 @@
               }
             });
           }
+          if (values.value) {
+            windowState.headerIcon = measurementTypeIcon[values.value.type];
+          }
         },
         { immediate: true },
       );
 
       onUnmounted(() => {
+        creationFinished();
         renameListener();
-        if (!isPersistent.value) {
-          (
-            manager.currentSession.value as SelectFeaturesSession
-          )?.clearSelection?.();
-        }
+        nextTick(() => {
+          if (!app.windowManager.has(windowState.id)) {
+            manager.stop();
+            manager.currentFeature.value = undefined;
+          }
+        }).catch((err: unknown) => {
+          getLogger(name).error('Error on window close ', err);
+        });
       });
 
       return {
@@ -447,23 +475,23 @@
         activeMapClassName,
         values,
         headers,
-        targetFeature,
+        targetFeature: manager.currentFeature,
         isPersistent,
         isInCreation,
         isMapSupported,
         isEditable,
-        editActions,
+        editAction,
         sketchIcon,
         createNewMeasurement(): void {
-          manager.startCreateSession(values.value.type);
-          app.windowManager.remove(windowId);
+          manager
+            .startCreateSession(values.value!.type)
+            .catch((err: unknown) => {
+              getLogger(name).error('Error starting create session', err);
+            });
         },
         addToCategory(): void {
-          if (targetFeature.value) {
-            manager.category!.addToCollection(targetFeature.value);
-            manager.currentFeatures.value = [targetFeature.value];
-            isPersistent.value = true;
-          }
+          manager.persistCurrentFeature();
+          isPersistent.value = true;
         },
         getCopyAction(value: string): VcsAction {
           return {

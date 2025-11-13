@@ -19,6 +19,7 @@ import MeasurementMode, {
   getValues,
   MeasurementType,
 } from './measurementMode.js';
+import type { MeasurementFeature } from '../measurementManager';
 
 class Area2D extends MeasurementMode {
   // eslint-disable-next-line class-methods-use-this
@@ -69,7 +70,9 @@ class Area2D extends MeasurementMode {
     return templateFeature;
   }
 
-  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
+  static getStyleFunction(
+    highlight: boolean,
+  ): (feature: MeasurementFeature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
       : (defaultVectorStyle.style as Style);

@@ -1,8 +1,8 @@
 import { reactive, watch } from 'vue';
 import type { GeometryType } from '@vcmap/core';
-import { SessionType } from '@vcmap/core';
 import type { SelectToolboxComponentOptions, VcsUiApp } from '@vcmap/ui';
 import { ToolboxType } from '@vcmap/ui';
+import { getLogger } from '@vcsuite/logger';
 import { name } from '../../package.json';
 import type { MeasurementPlugin } from '../index.js';
 import type { MeasurementManager } from '../measurementManager.js';
@@ -12,11 +12,6 @@ import {
   MeasurementType,
 } from '../mode/measurementMode.js';
 import type { MeasurementConfig } from './configHelper';
-
-type MeasurementToolbox = {
-  toolbox: SelectToolboxComponentOptions;
-  destroy: () => void;
-};
 
 type MeasurementToolButton = {
   name: MeasurementType;
@@ -36,36 +31,58 @@ export const measurementTypeIcon = {
   [MeasurementType.ObliqueHeight2D]: '$vcs2dHeightOblique',
 };
 
-function createCreateToolbox(
-  manager: MeasurementManager,
-  disabled: boolean,
-): MeasurementToolbox {
-  const createCreateButton = (
-    measurementType: MeasurementType,
-  ): MeasurementToolButton => ({
+function createCreateButton(
+  measurementType: MeasurementType,
+): MeasurementToolButton {
+  return {
     name: measurementType,
     title: `measurement.create.tooltip.${measurementType}`,
     icon: measurementTypeIcon[measurementType],
     geometryType: measurementGeometryType[measurementType],
-  });
+  };
+}
+
+export function addToolButtons(
+  manager: MeasurementManager,
+  app: VcsUiApp,
+): () => void {
+  const { config } = app.plugins.getByKey(name) as MeasurementPlugin;
+
+  function isActive(): boolean {
+    return app.windowManager.has(manager.windowId);
+  }
+
+  function isDisabled(): boolean {
+    return app.maps.activeMap
+      ? config[app.maps.activeMap.className as keyof MeasurementConfig]?.disable
+      : true;
+  }
 
   const toolbox: SelectToolboxComponentOptions = {
     type: ToolboxType.SELECT,
     action: reactive({
       name: 'creation',
       currentIndex: 0,
-      active: false,
-      disabled,
+      active: isActive(),
+      disabled: isDisabled(),
       callback(): void {
-        if (this.active) {
-          manager.stop();
+        if (isActive()) {
+          app.windowManager.remove(manager.windowId);
         } else {
-          manager.startCreateSession(this.tools[this.currentIndex].name);
+          manager
+            .startCreateSession(this.tools[this.currentIndex].name)
+            .catch((err: unknown) => {
+              getLogger(name).error('Error starting create session ', err);
+            });
         }
       },
       selected(newIndex: number): void {
         this.currentIndex = newIndex;
-        manager.startCreateSession(this.tools[this.currentIndex].name);
+        manager
+          .startCreateSession(this.tools[this.currentIndex].name)
+          .catch((err: unknown) => {
+            getLogger(name).error('Error starting create session ', err);
+          });
       },
       tools: [
         createCreateButton(MeasurementType.Position2D),
@@ -79,55 +96,15 @@ function createCreateToolbox(
       ],
     }),
   };
-
-  const destroy = watch(manager.currentSession, () => {
-    const currentSession = manager.currentSession.value;
-    if (currentSession?.type === SessionType.SELECT) {
-      toolbox.action.active = false;
-    } else {
-      toolbox.action.active = !!currentSession;
-      if (
-        toolbox.action.active &&
-        currentSession?.type === SessionType.CREATE
-      ) {
-        const toolName = manager.currentMeasurementMode.value!.type;
-        const index = toolbox.action.tools.findIndex(
-          (t) => (t.name as MeasurementType) === toolName,
-        );
-        if (index >= 0 && toolbox.action.currentIndex !== index) {
-          toolbox.action.currentIndex = index;
-        }
-      }
-    }
-  });
-
-  return {
-    toolbox,
-    destroy,
-  };
-}
-
-export function addToolButtons(
-  manager: MeasurementManager,
-  app: VcsUiApp,
-): () => void {
-  const { config } = app.plugins.getByKey(name) as MeasurementPlugin;
-  let disabled =
-    config[app.maps.activeMap!.className as keyof MeasurementConfig]?.disable;
-
-  const { toolbox: createToolbox, destroy: destroyCreateToolbox } =
-    createCreateToolbox(manager, disabled);
-  const createId = app.toolboxManager.add(createToolbox, name).id;
-
+  const createId = app.toolboxManager.add(toolbox, name).id;
   function updateTools(): void {
-    disabled =
-      config[app.maps.activeMap!.className as keyof MeasurementConfig]?.disable;
-    createToolbox.action.tools.forEach((tool) => {
+    toolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
-    createToolbox.action.disabled = disabled;
+    const disabled = isDisabled();
+    toolbox.action.disabled = disabled;
     if (!disabled) {
-      const filteredTools = createToolbox.action.tools.filter((tool) => {
+      const filteredTools = toolbox.action.tools.filter((tool) => {
         return createMeasurementMode(
           tool.name as MeasurementType,
           app,
@@ -139,40 +116,50 @@ export function addToolButtons(
         tool.disabled = false;
       });
 
-      createToolbox.action.disabled = filteredTools.length === 0;
+      toolbox.action.disabled = filteredTools.length === 0;
 
-      const { currentIndex } = createToolbox.action;
-      if (!filteredTools.includes(createToolbox.action.tools[currentIndex])) {
-        createToolbox.action.currentIndex =
-          createToolbox.action.tools.findIndex(
-            (tool) =>
-              (tool.name as MeasurementType) === MeasurementType.Distance2D,
-          );
+      const { currentIndex } = toolbox.action;
+      if (!filteredTools.includes(toolbox.action.tools[currentIndex])) {
+        toolbox.action.currentIndex = toolbox.action.tools.findIndex(
+          (tool) => !tool.disabled,
+        );
       }
     }
 
-    if (manager.currentFeatures.value) {
-      manager.currentLayer.value.removeFeaturesById(
-        manager.currentLayer.value
-          .getFeatures()
-          .filter(
-            (f) =>
-              !manager.category?.collection.hasKey(f.getId()!) &&
-              manager.currentSession.value?.type === SessionType.CREATE,
-          )
-          .map((f) => f.getId()!),
-      );
-    }
-
+    manager.currentFeature.value = undefined;
     manager.stop();
   }
   updateTools();
-  const destroyMapEventListener =
-    app.maps.mapActivated.addEventListener(updateTools);
+
+  const listeners = [
+    app.maps.mapActivated.addEventListener(updateTools),
+    app.windowManager.added.addEventListener(() => {
+      toolbox.action.active = isActive();
+    }),
+    app.windowManager.removed.addEventListener(() => {
+      toolbox.action.active = isActive();
+    }),
+    watch(
+      manager.currentMeasurementMode,
+      (mode) => {
+        if (mode) {
+          const toolName = mode.type;
+          const index = toolbox.action.tools.findIndex(
+            (t) => (t.name as MeasurementType) === toolName,
+          );
+          if (index >= 0 && toolbox.action.currentIndex !== index) {
+            toolbox.action.currentIndex = index;
+          }
+        }
+      },
+      { immediate: true },
+    ),
+  ];
 
   return () => {
     app.toolboxManager.remove(createId);
-    destroyCreateToolbox();
-    destroyMapEventListener();
+    listeners.forEach((l) => {
+      l();
+    });
   };
 }

@@ -8,14 +8,6 @@ VC Map Plugin allowing measurements directly in the Map.
 
 The measurement mode is active when the respective measurement option is activated, recognizable by the change of the mouse cursor from the selection arrow to the editing pen icon edit. Clicking on the map starts the measurement or continues a measurement that has already been started. Measurements can be completed by double-clicking at the endpoint. A new measurement is started using the NEW button.
 
-### Select measurements
-
-Individual objects can be selected by clicking on the measurement geometry. Multiple selection is also possible by pressing "Ctrl" on the keyboard.
-
-Subsequently pressing "Del" on the keyboard removes a selected measurement from the view or from My Workspace.
-
-Additionally, individual measurements can be directly edited, shown/hidden, or removed by right-clicking on the corresponding measurement object.
-
 ### Edit Vertices
 
 The Edit Mode can be acitvated through the following methods:
@@ -89,7 +81,10 @@ The default configuration is shown below, and can be used as an example to set a
   "OpenlayersMap": {
     "disable": false,
     "decimalPlaces": 2
-    // "decimalPlacesZ": 0
+  },
+  "PanoramaMap": {
+    "disable": true,
+    "decimalPlaces": 2
   }
 }
 ```

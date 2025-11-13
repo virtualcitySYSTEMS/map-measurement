@@ -19,7 +19,10 @@ import { getDistance as haversineDistance } from 'ol/sphere.js';
 import type { Geometry } from 'ol/geom.js';
 import { LineString, Point } from 'ol/geom.js';
 import { Style } from 'ol/style.js';
-import type { MeasurementManager } from '../measurementManager.js';
+import type {
+  MeasurementFeature,
+  MeasurementManager,
+} from '../measurementManager.js';
 import MeasurementMode, {
   getValues,
   MeasurementType,
@@ -163,7 +166,9 @@ class Distance2D extends MeasurementMode {
     return templateFeature;
   }
 
-  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
+  static getStyleFunction(
+    highlight: boolean,
+  ): (feature: MeasurementFeature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
       : (defaultVectorStyle.style as Style);

@@ -1,11 +1,10 @@
-import type { CreateFeatureSession } from '@vcmap/core';
 import {
+  PanoramaMap,
   CesiumMap,
   defaultVectorStyle,
   GeometryType,
   getDefaultHighlightStyle,
   Projection,
-  SessionType,
 } from '@vcmap/core';
 import { Cartesian3, Math as CesiumMath } from '@vcmap-cesium/engine';
 import type { Geometry } from 'ol/geom.js';
@@ -17,6 +16,8 @@ import MeasurementMode, {
   getValues,
   MeasurementType,
 } from './measurementMode.js';
+import { isCreateSession } from '../util/actionHelper';
+import type { MeasurementFeature } from '../measurementManager';
 
 const cartesianMap = [
   { key: 'height', indices: [0, 1] },
@@ -37,7 +38,7 @@ class Height3D extends MeasurementMode {
 
   // eslint-disable-next-line class-methods-use-this
   get supportedMaps(): string[] {
-    return [CesiumMap.className];
+    return [CesiumMap.className, PanoramaMap.className];
   }
 
   calcMeasurementResult(feature: Feature): Promise<boolean> {
@@ -49,12 +50,9 @@ class Height3D extends MeasurementMode {
 
     if (
       coords.length === 3 &&
-      this.manager.currentSession.value?.type === SessionType.CREATE
+      isCreateSession(this.manager.currentSession.value)
     ) {
-      (
-        this.manager.currentSession
-          .value as CreateFeatureSession<GeometryType.LineString>
-      ).finish();
+      this.manager.currentSession.value.finish();
       return Promise.resolve(false);
     }
 
@@ -122,7 +120,9 @@ class Height3D extends MeasurementMode {
     return templateFeature;
   }
 
-  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
+  static getStyleFunction(
+    highlight: boolean,
+  ): (feature: MeasurementFeature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
       : (defaultVectorStyle.style as Style);

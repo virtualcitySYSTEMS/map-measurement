@@ -19,7 +19,10 @@ import { transform } from 'ol/proj';
 import type { Geometry } from 'ol/geom';
 import { LineString, Point } from 'ol/geom';
 import { Style } from 'ol/style.js';
-import type { MeasurementManager } from '../measurementManager.js';
+import type {
+  MeasurementFeature,
+  MeasurementManager,
+} from '../measurementManager.js';
 import MeasurementMode, {
   measurementModeSymbol,
   MeasurementType,
@@ -240,7 +243,9 @@ class ObliqueHeight extends MeasurementMode {
     return templateFeature;
   }
 
-  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
+  static getStyleFunction(
+    highlight: boolean,
+  ): (feature: MeasurementFeature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
       : (defaultVectorStyle.style as Style);

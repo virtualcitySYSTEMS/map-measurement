@@ -3,6 +3,7 @@ import {
   GeometryType,
   getFlatCoordinateReferences,
   mercatorProjection,
+  PanoramaMap,
   Projection,
 } from '@vcmap/core';
 import { Cartesian3 } from '@vcmap-cesium/engine';
@@ -26,7 +27,7 @@ class Distance3D extends MeasurementMode {
 
   // eslint-disable-next-line class-methods-use-this
   get supportedMaps(): string[] {
-    return [CesiumMap.className];
+    return [CesiumMap.className, PanoramaMap.className];
   }
 
   calcMeasurementResult(feature: Feature): Promise<boolean> {

@@ -4,6 +4,7 @@ import {
   GeometryType,
   getDefaultHighlightStyle,
   getFlatCoordinateReferences,
+  PanoramaMap,
   Projection,
 } from '@vcmap/core';
 import { Cartesian2, Cartesian3, PolygonPipeline } from '@vcmap-cesium/engine';
@@ -15,6 +16,8 @@ import MeasurementMode, {
   getValues,
   MeasurementType,
 } from './measurementMode.js';
+
+import type { MeasurementFeature } from '../measurementManager';
 
 let scratchAB: Cartesian3 = new Cartesian3();
 let scratchAC: Cartesian3 = new Cartesian3();
@@ -32,7 +35,7 @@ class Area3D extends MeasurementMode {
 
   // eslint-disable-next-line class-methods-use-this
   get supportedMaps(): string[] {
-    return [CesiumMap.className];
+    return [CesiumMap.className, PanoramaMap.className];
   }
 
   calcMeasurementResult(feature: Feature): Promise<boolean> {
@@ -108,7 +111,9 @@ class Area3D extends MeasurementMode {
     return templateFeature;
   }
 
-  static getStyleFunction(highlight: boolean): (feature: Feature) => Style[] {
+  static getStyleFunction(
+    highlight: boolean,
+  ): (feature: MeasurementFeature) => Style[] {
     const defaultStyle = highlight
       ? getDefaultHighlightStyle()
       : (defaultVectorStyle.style as Style);
@@ -118,7 +123,7 @@ class Area3D extends MeasurementMode {
       geometry: (f): Geometry => {
         const position = (f.getGeometry() as Polygon).getInteriorPoint();
         const labelCoords = position.getCoordinates();
-        labelCoords[2] = +(getValues(f as Feature)?.height ?? 0);
+        labelCoords[2] = +(getValues(f as MeasurementFeature)?.height ?? 0);
         position.setCoordinates(labelCoords);
         return position;
       },

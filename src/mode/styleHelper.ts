@@ -4,7 +4,6 @@ import {
   originalFeatureSymbol,
 } from '@vcmap/core';
 import type { FeatureLike } from 'ol/Feature.js';
-import type Feature from 'ol/Feature.js';
 import type { Style } from 'ol/style.js';
 import { measurementModeSymbol, MeasurementType } from './measurementMode.js';
 import Distance2D from './distance2D.js';
@@ -12,6 +11,7 @@ import Area2D from './area2D.js';
 import Area3D from './area3D.js';
 import Height3D from './height3D.js';
 import ObliqueHeight from './obliqueHeight.js';
+import type { MeasurementFeature } from '../measurementManager';
 
 export default function getMeasurementStyleFunction(
   highlight: boolean,
@@ -26,9 +26,9 @@ export default function getMeasurementStyleFunction(
     : (defaultVectorStyle.style as Style);
 
   return (featureLike) => {
-    const feature = featureLike as Feature;
+    const feature = featureLike as MeasurementFeature;
     const featureToCheck = feature[originalFeatureSymbol]
-      ? feature[originalFeatureSymbol]
+      ? (feature[originalFeatureSymbol] as MeasurementFeature)
       : feature;
 
     if (featureToCheck[measurementModeSymbol]) {

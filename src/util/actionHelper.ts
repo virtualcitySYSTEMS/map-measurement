@@ -1,86 +1,22 @@
 import type {
   GeoJSONwriteOptions,
-  SelectFeaturesSession,
   VectorLayer,
+  EditorSession,
+  CreateFeatureSession,
+  GeometryType,
+  EditGeometrySession,
 } from '@vcmap/core';
-import { writeGeoJSON } from '@vcmap/core';
+import {
+  FeatureVisibilityAction,
+  writeGeoJSON,
+  SessionType,
+} from '@vcmap/core';
 import type { CollectionComponentClass, VcsAction } from '@vcmap/ui';
 import { downloadText } from '@vcmap/ui';
-import type { WatchStopHandle } from 'vue';
-import { watch } from 'vue';
+import { reactive, type ShallowRef } from 'vue';
 import type Feature from 'ol/Feature';
-import type { MeasurementManager } from '../measurementManager.js';
-import type { SimpleMeasurementItem } from '../category/simpleCategory.js';
 
-/**
- * @param manager The measurement manager
- * @returns A VcsAction for deleting the current features.
- */
-export function createHideSelectedAction(
-  manager: MeasurementManager,
-): VcsAction {
-  return {
-    name: 'measurement.category.hideSelected',
-    icon: '$vcsCheckboxChecked',
-    callback(): void {
-      // XXX Copy paste from simple category
-      const layer = manager.getDefaultLayer();
-      if (
-        manager.currentLayer.value === layer &&
-        manager.currentFeatures.value?.length > 0 &&
-        (manager.currentSession.value as SelectFeaturesSession)?.currentFeatures
-          ?.length
-      ) {
-        const ids = manager.currentFeatures.value.map((f) => f.getId()!);
-        manager.currentLayer.value.featureVisibility.hideObjects(ids);
-      }
-    },
-  };
-}
-
-/**
- * @param manager The measurement manager
- * @param collectionComponent The collection component of the category.
- * @param hasIcon Whether the action should have an icon or not.
- * @returns A VcsAction for deleting selected features and the corresponding destroy function.
- */
-export function createDeleteSelectedAction(
-  manager: MeasurementManager,
-  collectionComponent?: CollectionComponentClass<SimpleMeasurementItem>,
-  hasIcon = true,
-): { action: VcsAction; destroy: WatchStopHandle } {
-  const removeAction: VcsAction = {
-    name: 'measurement.category.removeSelected',
-    icon: hasIcon ? '$vcsTrashCan' : undefined,
-    callback(): void {
-      if (collectionComponent) {
-        manager.currentLayer.value.removeFeaturesById(
-          collectionComponent.selection.value.map((s) => s.name),
-        );
-      } else if (manager.currentFeatures.value?.length > 0) {
-        manager.currentLayer.value.removeFeaturesById(
-          manager.currentFeatures.value.map((f) => f.getId()!),
-        );
-      }
-    },
-  };
-
-  let destroyWatcher = (): void => {};
-  if (collectionComponent) {
-    destroyWatcher = watch(
-      collectionComponent.selection,
-      (selection) => {
-        removeAction.disabled = selection.length === 0;
-      },
-      { immediate: true },
-    );
-  }
-
-  return {
-    action: removeAction,
-    destroy: destroyWatcher,
-  };
-}
+import type { MeasurementFeature } from '../measurementManager';
 
 function exportFeatures(
   features: Feature[],
@@ -99,12 +35,12 @@ function exportFeatures(
 
 /**
  * Creates an action that exports all selected features. If no features are selected, all features of the editorManagers layer are exported.
- * @param manager The editorManager
+ * @param layer
  * @param collectionComponent The collection component of the category.
  */
 export function createExportCallback(
-  manager: MeasurementManager,
-  collectionComponent: CollectionComponentClass<SimpleMeasurementItem>,
+  layer: VectorLayer,
+  collectionComponent: CollectionComponentClass<MeasurementFeature>,
 ): void {
   const writeOptions = {
     writeStyle: true,
@@ -112,8 +48,83 @@ export function createExportCallback(
     prettyPrint: true,
     writeId: true,
   };
-  const selectedFeatures = manager.currentLayer.value.getFeaturesById(
+  const selectedFeatures = layer.getFeaturesById(
     collectionComponent.selection.value.map((s) => s.name),
   );
-  exportFeatures(selectedFeatures, manager.currentLayer.value, writeOptions);
+  exportFeatures(selectedFeatures, layer, writeOptions);
+}
+
+export function createHideAllAction(
+  layer: VectorLayer,
+  currentFeature: ShallowRef<MeasurementFeature | undefined>,
+  collectionComponent: CollectionComponentClass<MeasurementFeature>,
+): {
+  action: VcsAction;
+  destroy: () => void;
+} {
+  const hideAllAction = reactive({
+    name: 'hideAllAction',
+    icon: '$vcsCheckboxChecked',
+    callback(): void {
+      const hiddenObjectIds = Object.keys(
+        layer.featureVisibility.hiddenObjects,
+      );
+      if (
+        collectionComponent.items.value.every(
+          (i) => !hiddenObjectIds.includes(i.name),
+        )
+      ) {
+        layer.featureVisibility.hideObjects(
+          layer.getFeatures().map((feature) => feature.getId()!),
+        );
+        currentFeature.value = undefined;
+        this.icon = '$vcsCheckbox';
+      } else {
+        layer.featureVisibility.clearHiddenObjects();
+        this.icon = '$vcsCheckboxChecked';
+      }
+    },
+  });
+
+  const destroyHideAllAction = layer.featureVisibility.changed.addEventListener(
+    (event) => {
+      if (
+        event.action === FeatureVisibilityAction.HIDE ||
+        event.action === FeatureVisibilityAction.SHOW
+      ) {
+        const hiddenObjectIds = Object.keys(
+          layer.featureVisibility.hiddenObjects,
+        );
+        if (
+          collectionComponent.items.value.every((i) =>
+            hiddenObjectIds.includes(i.name),
+          )
+        ) {
+          hideAllAction.icon = '$vcsCheckbox';
+        } else if (
+          collectionComponent.items.value.every(
+            (i) => !hiddenObjectIds.includes(i.name),
+          )
+        ) {
+          hideAllAction.icon = '$vcsCheckboxChecked';
+        } else {
+          hideAllAction.icon = '$vcsCheckboxIndeterminate';
+        }
+      }
+    },
+  );
+
+  return { action: hideAllAction, destroy: destroyHideAllAction };
+}
+
+export function isCreateSession(
+  session?: EditorSession,
+): session is CreateFeatureSession<GeometryType> {
+  return session?.type === SessionType.CREATE;
+}
+
+export function isEditGeometrySession(
+  session?: EditorSession,
+): session is EditGeometrySession {
+  return session?.type === SessionType.EDIT_GEOMETRY;
 }

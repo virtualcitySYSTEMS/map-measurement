@@ -1,6 +1,6 @@
 {
   "name": "@vcmap/measurement",
-  "version": "4.0.0",
+  "version": "5.0.0-rc.0",
   "description": "VCM Measurement Plugin",
   "type": "module",
   "main": "src/index.js",
@@ -41,16 +41,16 @@
   "prettier": "@vcsuite/eslint-config/prettier.js",
   "peerDependencies": {
     "@vcmap-cesium/engine": "^11.0.3",
-    "@vcmap/core": "^6.2.0-rc.2",
-    "@vcmap/ui": "^6.2.0-rc.3",
+    "@vcmap/core": "^6.3.0-rc.1",
+    "@vcmap/ui": "^6.3.0-rc.1",
     "ol": "^10.4.0",
     "vue": "~3.4.38",
     "vuetify": "~3.7.14"
   },
   "overrides": {
     "esbuild": "^0.25.0",
-    "@vcmap/core": "^6.2.0-rc.2",
-    "@vcmap/ui": "^6.2.0-rc.3"
+    "@vcmap/core": "^6.3.0-rc.1",
+    "@vcmap/ui": "^6.3.0-rc.1"
   },
   "devDependencies": {
     "@vcmap/plugin-cli": "^4.1.2",
@@ -67,5 +67,5 @@
   "dependencies": {
     "@vcsuite/logger": "^1.0.1"
   },
-  "mapVersion": "^6.2"
+  "mapVersion": "^6.3"
 }
