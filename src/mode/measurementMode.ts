@@ -1,6 +1,8 @@
 import Feature from 'ol/Feature.js';
-import type { Projection, VcsMap } from '@vcmap/core';
 import {
+  PanoramaMap,
+  type Projection,
+  type VcsMap,
   CesiumMap,
   GeometryType,
   getDefaultProjection,
@@ -101,8 +103,13 @@ export function isSupportedMeasurement(
     feature[measurementModeSymbol]?.supportedMaps ??
     feature[originalFeatureSymbol]?.[measurementModeSymbol]?.supportedMaps ??
     [];
-  return supportedMaps.includes(map.className);
+  const isSupported = supportedMaps.includes(map.className);
+  if (map instanceof PanoramaMap) {
+    return isSupported && !!map.currentPanoramaImage?.hasDepth;
+  }
+  return isSupported;
 }
+
 type MeasurementModeOptions = {
   app: VcsUiApp;
   manager: MeasurementManager;

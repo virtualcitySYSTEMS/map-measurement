@@ -1,3 +1,7 @@
+# v5.0.1
+
+- Fixes an issue where measuring in panorama was allowed without depth information.
+
 # v5.0.0
 
 - Update to @vcmap/core 6.3 and @vcmap/ui 6.3

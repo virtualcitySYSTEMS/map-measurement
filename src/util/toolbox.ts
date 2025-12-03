@@ -1,5 +1,5 @@
 import { reactive, watch } from 'vue';
-import type { GeometryType } from '@vcmap/core';
+import { type GeometryType, PanoramaMap, type VcsMap } from '@vcmap/core';
 import type { SelectToolboxComponentOptions, VcsUiApp } from '@vcmap/ui';
 import { ToolboxType } from '@vcmap/ui';
 import { getLogger } from '@vcsuite/logger';
@@ -53,9 +53,13 @@ export function addToolButtons(
   }
 
   function isDisabled(): boolean {
-    return app.maps.activeMap
-      ? config[app.maps.activeMap.className as keyof MeasurementConfig]?.disable
-      : true;
+    const { activeMap } = app.maps;
+    const disabled =
+      config[activeMap?.className as keyof MeasurementConfig]?.disable ?? true;
+    if (!disabled && activeMap instanceof PanoramaMap) {
+      return !activeMap.currentPanoramaImage?.hasDepth;
+    }
+    return disabled;
   }
 
   const toolbox: SelectToolboxComponentOptions = {
@@ -97,7 +101,7 @@ export function addToolButtons(
     }),
   };
   const createId = app.toolboxManager.add(toolbox, name).id;
-  function updateTools(): void {
+  function updateTool(): void {
     toolbox.action.tools.forEach((tool) => {
       tool.disabled = true;
     });
@@ -129,10 +133,20 @@ export function addToolButtons(
     manager.currentFeature.value = undefined;
     manager.stop();
   }
-  updateTools();
+  let imageChangedListener = (): void => {};
+  function mapChanged(map?: VcsMap): void {
+    imageChangedListener();
+    updateTool();
+    if (map instanceof PanoramaMap) {
+      imageChangedListener = map.currentImageChanged.addEventListener(() => {
+        updateTool();
+      });
+    }
+  }
+  mapChanged(app.maps.activeMap!);
 
   const listeners = [
-    app.maps.mapActivated.addEventListener(updateTools),
+    app.maps.mapActivated.addEventListener(mapChanged),
     app.windowManager.added.addEventListener(() => {
       toolbox.action.active = isActive();
     }),
@@ -154,6 +168,9 @@ export function addToolButtons(
       },
       { immediate: true },
     ),
+    (): void => {
+      imageChangedListener();
+    },
   ];
 
   return () => {

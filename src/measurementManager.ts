@@ -1,5 +1,6 @@
 import { nextTick, reactive, type ShallowRef, shallowRef, watch } from 'vue';
 import {
+  type PanoramaImage,
   CesiumMap,
   Collection,
   doNotTransform,
@@ -21,6 +22,7 @@ import {
   type originalFeatureSymbol,
   writeGeoJSONFeature,
   parseGeoJSON,
+  type VcsMap,
 } from '@vcmap/core';
 import { getLogger } from '@vcsuite/logger';
 import {
@@ -28,7 +30,6 @@ import {
   type CollectionComponentListItem,
   createListExportAction,
   createListImportAction,
-  createSupportedMapMappingFunction,
   importIntoLayer,
   makeEditorCollectionComponentClass,
   type EditorCollectionComponentClass,
@@ -328,8 +329,35 @@ function itemMappingFunction(
 
   categoryListItem.actions.push(hideAction, zoomToAction);
 
+  let currentImageListener = (): void => {};
+  const panoramaImageChanged = (image?: PanoramaImage): void => {
+    categoryListItem.disabled = !image?.hasDepth;
+  };
+
+  const mapChanged = (map: VcsMap): void => {
+    currentImageListener();
+    if (
+      map instanceof OpenlayersMap ||
+      map instanceof CesiumMap ||
+      map instanceof ObliqueMap
+    ) {
+      categoryListItem.disabled = false;
+    } else if (map instanceof PanoramaMap) {
+      currentImageListener =
+        map.currentImageChanged.addEventListener(panoramaImageChanged);
+      panoramaImageChanged(map.currentPanoramaImage);
+    } else {
+      categoryListItem.disabled = true;
+    }
+  };
+
+  const mapChangedListener = app.maps.mapActivated.addEventListener(mapChanged);
+  mapChanged(app.maps.activeMap!);
+
   categoryListItem.destroy = (): void => {
     hideListener();
+    mapChangedListener();
+    currentImageListener();
   };
 }
 
@@ -436,19 +464,6 @@ function createCollection(
 
   collectionComponent.addItemMapping({
     mappingFunction: itemMappingFunction.bind(null, app, layer),
-    owner: name,
-  });
-
-  collectionComponent.addItemMapping({
-    mappingFunction: createSupportedMapMappingFunction(
-      [
-        CesiumMap.className,
-        OpenlayersMap.className,
-        ObliqueMap.className,
-        PanoramaMap.className,
-      ],
-      app.maps,
-    ),
     owner: name,
   });
 
