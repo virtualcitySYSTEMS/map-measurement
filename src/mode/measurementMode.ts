@@ -145,7 +145,8 @@ class MeasurementMode {
     this.decimalPlacesAngle = config[MapNames.Cesium].decimalPlacesAngle;
     if (
       activeMapClassName === MapNames.Cesium ||
-      activeMapClassName === MapNames.Oblique
+      activeMapClassName === MapNames.Oblique ||
+      activeMapClassName === MapNames.Panorama
     ) {
       this.decimalPlacesZ =
         config[activeMapClassName].decimalPlacesZ ?? this.decimalPlaces;

@@ -1,3 +1,7 @@
+# v5.0.2
+
+- Fixes an issue where the height decimals would not be applied in panorama.
+
 # v5.0.1
 
 - Fixes an issue where measuring in panorama was allowed without depth information.
